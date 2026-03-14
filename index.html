@@ -4,208 +4,194 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0f766e" />
-  <title>iPAS 測驗 - 完整功能旗艦版</title>
-
+  <title>iPAS 測驗 - 專業版 (含考試模式)</title>
   <style>
-    /* 這裡保留你原本所有漂亮的 CSS */
     :root { --bg:#0b1220; --card:#121a2a; --muted:#94a3b8; --text:#e5e7eb; --brand:#14b8a6; --danger:#ef4444; --ok:#22c55e; }
     *{ box-sizing:border-box; }
-    body{ margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", Arial;
-          background:linear-gradient(180deg,#071023,#0b1220 40%); color:var(--text); }
+    body{ margin:0; font-family: ui-sans-serif, system-ui, sans-serif; background:linear-gradient(180deg,#071023,#0b1220 40%); color:var(--text); }
     .wrap{ max-width:1100px; margin:0 auto; padding:16px; }
     .topbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; }
     .brand{ font-weight:900; letter-spacing:.5px; }
-    .pill{ font-size:12px; color:#b6c2d6; background:rgba(148,163,184,.12); border:1px solid rgba(148,163,184,.22);
-          padding:6px 10px; border-radius:999px; display:inline-flex; gap:8px; align-items:center; }
-    .card{ background:rgba(18,26,42,.92); border:1px solid rgba(148,163,184,.18);
-          border-radius:16px; padding:16px; box-shadow: 0 10px 30px rgba(0,0,0,.28); margin-bottom: 12px;}
+    .pill{ font-size:12px; color:#b6c2d6; background:rgba(148,163,184,.12); border:1px solid rgba(148,163,184,.22); padding:6px 10px; border-radius:999px; display:inline-flex; gap:8px; align-items:center; }
+    .card{ background:rgba(18,26,42,.92); border:1px solid rgba(148,163,184,.18); border-radius:16px; padding:16px; box-shadow: 0 10px 30px rgba(0,0,0,.28); margin-bottom: 12px;}
     .row{ display:flex; gap:10px; flex-wrap:wrap; }
     .grid{ display:grid; grid-template-columns:1fr; gap:12px; }
     @media (min-width: 920px){ .grid{ grid-template-columns: 1.25fr .75fr; } }
     .muted{ color:var(--muted); }
     .kbd{ font-family: ui-monospace, monospace; font-size:12px; padding:2px 6px; border-radius:8px; border:1px solid rgba(148,163,184,.25); background:rgba(2,6,23,.35); color:#d6dee9; }
-    .btn{ appearance:none; border:0; border-radius:12px; padding:10px 12px; cursor:pointer;
-          background:rgba(20,184,166,.14); color:#c7fff6; border:1px solid rgba(20,184,166,.45); font-weight:800; }
+    .btn{ appearance:none; border:0; border-radius:12px; padding:10px 12px; cursor:pointer; background:rgba(20,184,166,.14); color:#c7fff6; border:1px solid rgba(20,184,166,.45); font-weight:800; }
     .btn:hover{ filter:brightness(1.05); }
+    .btn:disabled{ opacity: 0.3; cursor: not-allowed; }
     .btn2{ background:rgba(148,163,184,.12); border:1px solid rgba(148,163,184,.28); color:#e5e7eb; }
     .btnDanger{ background:rgba(239,68,68,.14); border:1px solid rgba(239,68,68,.45); color:#ffd2d2; font-weight:900; }
     .btnOk{ background:rgba(34,197,94,.12); border:1px solid rgba(34,197,94,.45); color:#d6ffe2; font-weight:900; }
-    .btn-active { background:var(--brand) !important; color:white !important; border-color:white !important; box-shadow: 0 0 10px var(--brand); }
-
-    .progress{ height:10px; background:rgba(148,163,184,0.14); border-radius:999px; overflow:hidden; border:1px solid rgba(148,163,184,0.18); }
-    .bar{ height:100%; width:0%; background:linear-gradient(90deg, #14b8a6, #22c55e); transition: width 0.3s; }
-
-    .opt{ width:100%; text-align:left; padding:14px; border-radius:14px; border:1px solid rgba(148,163,184,.22);
-          background:rgba(2,6,23,.35); color:var(--text); cursor:pointer; font-size:18px; line-height:1.6; margin-bottom:10px; }
-    .opt:hover{ border-color:var(--brand); }
-    .opt.selected{ outline:2px solid var(--brand); border-color:var(--brand); }
-    .opt.correct{ outline:2px solid var(--ok); border-color:var(--ok); background:rgba(34,197,94,0.1); }
-    .opt.wrong{ outline:2px solid var(--danger); border-color:var(--danger); background:rgba(239,68,68,0.1); }
-
+    .btn-active { background:var(--brand) !important; color:white !important; border-color:white !important; }
+    .progress{ height:10px; background:rgba(148,163,184,0.14); border-radius:999px; overflow:hidden; }
+    .bar{ height:100%; width:0%; background:linear-gradient(90deg, #14b8a6, #22c55e); transition: 0.3s; }
+    .opt{ width:100%; text-align:left; padding:14px; border-radius:14px; border:1px solid rgba(148,163,184,.22); background:rgba(2,6,23,.35); color:var(--text); cursor:pointer; font-size:18px; margin-bottom:10px; }
+    .opt.selected{ outline:2px solid var(--brand); }
+    .opt.correct{ outline:2px solid var(--ok); background:rgba(34,197,94,0.1); }
+    .opt.wrong{ outline:2px solid var(--danger); background:rgba(239,68,68,0.1); }
     .miniGrid{ display:grid; grid-template-columns: repeat(10, 1fr); gap:6px; }
-    .qdot{ border-radius:10px; padding:6px 0; text-align:center; font-size:12px; border:1px solid rgba(148,163,184,.22); cursor:pointer; background:rgba(2,6,23,.35); }
+    .qdot{ border-radius:10px; padding:6px 0; text-align:center; font-size:12px; border:1px solid rgba(148,163,184,.22); cursor:pointer; }
     .qdot.active{ outline:2px solid var(--brand); }
-    .qdot.ok{ border-color:var(--ok); color:var(--ok); }
-    .divider{ height:1px; background:rgba(148,163,184,.18); margin:12px 0; }
-    .toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:16px; padding:10px 12px;
-            background:rgba(2,6,23,.82); border:1px solid rgba(148,163,184,.25); border-radius:12px; color:#e5e7eb;
-            display:none; z-index:9999; }
+    .qdot.ok{ border-color:var(--brand); }
+    .qdot.right{ border-color:var(--ok); color:var(--ok); }
+    .qdot.bad{ border-color:var(--danger); color:var(--danger); }
   </style>
 </head>
-
 <body>
   <div class="wrap">
     <div class="topbar">
-      <div>
-        <div class="brand">iPAS 測驗</div>
-        <div class="muted" style="font-size:12px;">版本：<span id="appVer">1.1.0</span></div>
-      </div>
-      <div class="pill" id="statusPill">
-        <span id="statusText">系統就緒</span>
-        <span class="kbd" id="timerText">--:--</span>
+      <div><div class="brand">iPAS 測驗</div></div>
+      <div class="pill">
+        <span id="modeStatus">練習模式</span>
+        <span class="kbd" id="timerDisplay">90:00</span>
       </div>
     </div>
-
     <div class="grid">
       <div class="card">
-        <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <div class="row" style="justify-content:space-between; margin-bottom:15px;">
           <div class="row">
-            <button class="btn2 btn" id="btnSetAll" onclick="switchLib('./ipas_questions_all.json')">全部題庫</button>
-            <button class="btn2 btn" id="btnSetAi" onclick="switchLib('./ipas_questions_ai.json')">AI 應用規劃師</button>
+            <button class="btn2 btn" id="libAll" onclick="switchLib('./ipas_questions_all.json')">全部題庫</button>
+            <button class="btn2 btn" id="libAi" onclick="switchLib('./ipas_questions_ai.json')">AI 規劃師</button>
           </div>
           <button class="btnDanger btn" onclick="clearProgress()">清除進度</button>
         </div>
-
-        <div style="margin-bottom:15px;">
-          <div class="progress"><div class="bar" id="bar"></div></div>
-          <div class="row" style="justify-content:space-between; margin-top:8px;">
-            <div class="muted" id="progressText">0 / 0</div>
-            <div class="muted" id="scoreText">正確 0・錯誤 0</div>
-          </div>
+        <div class="progress"><div class="bar" id="bar"></div></div>
+        <div class="row" style="justify-content:space-between; margin:8px 0 15px;">
+          <div class="muted" id="progressText">0 / 0</div>
+          <div class="muted" id="scoreDisplay">準備就緒</div>
         </div>
-
-        <div id="questionArea">
-          <div class="muted">載入題目中...</div>
-        </div>
-
+        <div id="quizArea"></div>
         <div class="row" style="margin-top:20px; justify-content:space-between;">
-          <button class="btn2 btn" id="btnPrev">上一題</button>
+          <button class="btn2 btn" onclick="move(-1)">上一題</button>
           <div class="row">
-            <button class="btn2 btn" id="btnReveal">看答案</button>
-            <button class="btn" id="btnNext">下一題</button>
+            <button class="btn2 btn" id="btnReveal" onclick="reveal()">看答案</button>
+            <button class="btnOk btn" id="btnSubmit" onclick="submitExam()">已交卷</button>
+            <button class="btn" onclick="move(1)">下一題</button>
           </div>
         </div>
       </div>
-
       <div class="card">
-        <div style="font-weight:900; margin-bottom:10px;">設定 / 工具</div>
-        <label class="muted" style="font-size:12px;">模式切換</label>
-        <div class="row" style="margin-top:5px;">
-          <button class="btn2 btn btn-active">練習模式</button>
-          <button class="btn2 btn">考試模式</button>
-        </div>
-        <div class="divider"></div>
-        <label class="muted" style="font-size:12px;">題目導覽 (點擊跳題)</label>
-        <div id="navGrid" class="miniGrid" style="margin-top:10px;"></div>
-        <div class="divider"></div>
+        <div style="font-weight:900; margin-bottom:10px;">模式選擇</div>
         <div class="row">
-          <button class="btnOk btn" style="width:100%;">成績分析報告</button>
+          <button class="btn2 btn" id="modeBtnPractice" onclick="switchMode('practice')">練習模式</button>
+          <button class="btn2 btn" id="modeBtnExam" onclick="switchMode('exam')">考試模式</button>
+        </div>
+        <div style="height:1px; background:rgba(148,163,184,0.18); margin:15px 0;"></div>
+        <div id="navGrid" class="miniGrid"></div>
+        <div id="resultBox" style="display:none; margin-top:15px; text-align:center;">
+          <div class="kbd" id="finalScore" style="display:block; padding:10px; font-size:20px;">總分：0</div>
         </div>
       </div>
     </div>
   </div>
-  <div class="toast" id="toast"></div>
 
 <script>
 (() => {
-    // 1. 核心邏輯：讀取記憶或預設
-    let CURRENT_URL = localStorage.getItem("ipas_active_url") || "./ipas_questions_ai.json";
-    const LS_STATE_PREFIX = "ipas_state_"; 
+    let libUrl = localStorage.getItem("ipas_active_url") || "./ipas_questions_ai.json";
+    let bank = [], currentIdx = 0, answers = {}, revealed = {}, submitted = false;
+    let mode = localStorage.getItem("quiz_mode") || "practice"; // 預設練習模式
+    let timeLeft = parseInt(localStorage.getItem("exam_time")) || 5400; // 90分
+    let timerInterval = null;
 
-    let bank = [], questions = [], currentIndex = 0, answers = {}, revealed = {};
+    window.switchLib = (url) => { localStorage.setItem("ipas_active_url", url); location.reload(); };
+    window.clearProgress = () => { if(confirm("重置進度？")){ localStorage.removeItem("ipas_save_"+libUrl); localStorage.removeItem("exam_time"); location.reload(); }};
 
-    // 2. 切換題庫（會記憶）
-    window.switchLib = (url) => {
-        localStorage.setItem("ipas_active_url", url);
+    window.switchMode = (newMode) => {
+        if(submitted) return alert("已交卷無法切換模式");
+        mode = newMode;
+        localStorage.setItem("quiz_mode", mode);
         location.reload();
     };
 
-    // 3. 清除進度（不影響題庫記憶）
-    window.clearProgress = () => {
-        if(confirm("確定要重置目前題庫的作答進度嗎？")){
-            localStorage.removeItem(LS_STATE_PREFIX + CURRENT_URL);
-            location.reload();
-        }
-    };
-
     async function init() {
-        // UI 更新：標記當前按鈕
-        if(CURRENT_URL.includes("ai")) document.getElementById("btnSetAi").classList.add("btn-active");
-        else document.getElementById("btnSetAll").classList.add("btn-active");
-
+        // UI 狀態同步
+        document.getElementById(libUrl.includes("ai")?"libAi":"libAll").classList.add("btn-active");
+        document.getElementById(mode==="exam"?"modeBtnExam":"modeBtnPractice").classList.add("btn-active");
+        document.getElementById("modeStatus").textContent = mode === "exam" ? "考試模式" : "練習模式";
+        
         try {
-            const res = await fetch(CURRENT_URL + "?v=" + Date.now());
+            const res = await fetch(libUrl + "?v=" + Date.now());
             const data = await res.json();
+            bank = data.map((q,i)=>({ id:q.id||(i+1), title:q.q||q.question, opts:q.a||q.options, ans:(typeof q.c==='number'?q.c-1:q.c) })).sort(()=>Math.random()-0.5).slice(0,50);
             
-            // 轉換格式並洗牌
-            bank = data.map((q, i) => ({
-                id: q.id || (i+1),
-                title: q.q || q.question,
-                opts: q.a || q.options,
-                ans: (typeof q.c === 'number' ? q.c - 1 : q.c)
-            })).sort(() => Math.random() - 0.5).slice(0, 50);
-
-            // 讀取該題庫專屬進度
-            const saved = JSON.parse(localStorage.getItem(LS_STATE_PREFIX + CURRENT_URL) || "{}");
+            const saved = JSON.parse(localStorage.getItem("ipas_save_"+libUrl) || "{}");
             answers = saved.answers || {};
-            currentIndex = saved.currentIndex || 0;
+            currentIdx = saved.currentIdx || 0;
+            submitted = saved.submitted || false;
 
+            if(mode === "exam" && !submitted) startTimer();
+            if(submitted) { document.getElementById("btnSubmit").disabled = true; document.getElementById("resultBox").style.display="block"; }
+            
             render();
-        } catch (e) {
-            document.getElementById("questionArea").innerHTML = "題庫載入失敗，請檢查檔案名稱是否正確。";
-        }
+        } catch(e) { document.getElementById("quizArea").innerHTML = "題庫載入失敗"; }
+    }
+
+    function startTimer() {
+        timerInterval = setInterval(() => {
+            if(timeLeft <= 0) { clearInterval(timerInterval); submitExam(); return; }
+            timeLeft--;
+            localStorage.setItem("exam_time", timeLeft);
+            const m = Math.floor(timeLeft/60), s = timeLeft%60;
+            document.getElementById("timerDisplay").textContent = `${m}:${s<10?'0':''}${s}`;
+        }, 1000);
     }
 
     function render() {
-        const q = bank[currentIndex];
-        if(!q) return;
+        const q = bank[currentIdx];
+        const isRev = (mode === "practice" && revealed[currentIdx]) || submitted;
+        
+        // 考試模式下未交卷不能點看答案
+        document.getElementById("btnReveal").disabled = (mode === "exam" && !submitted);
 
-        // 渲染題目
-        const area = document.getElementById("questionArea");
-        const userAns = answers[currentIndex];
-        const isRev = revealed[currentIndex];
-
-        let html = `<div style="font-size:20px; font-weight:900; margin-bottom:15px;">[${q.id}] ${q.title}</div>`;
+        let html = `<div style="font-size:20px; font-weight:900; margin-bottom:15px;">${currentIdx+1}. ${q.title}</div>`;
         q.opts.forEach((opt, i) => {
             let cls = "opt";
-            if (userAns === i) cls += " selected";
-            if (isRev) {
-                if (i === q.ans) cls += " correct";
-                else if (userAns === i) cls += " wrong";
+            if(answers[currentIdx] === i) cls += " selected";
+            if(isRev) {
+                if(i === q.ans) cls += " correct";
+                else if(answers[currentIdx] === i) cls += " wrong";
             }
-            html += `<button class="${cls}" onclick="handleChoose(${i})">${opt}</button>`;
+            html += `<button class="${cls}" onclick="choose(${i})">${opt}</button>`;
         });
-        area.innerHTML = html;
-
-        // 更新進度與導覽
-        document.getElementById("bar").style.width = ((currentIndex + 1) / bank.length * 100) + "%";
-        document.getElementById("progressText").textContent = `${currentIndex + 1} / ${bank.length}`;
+        document.getElementById("quizArea").innerHTML = html;
+        document.getElementById("bar").style.width = ((currentIdx+1)/bank.length*100) + "%";
+        document.getElementById("progressText").textContent = `${currentIdx+1} / ${bank.length}`;
         
-        const nav = document.getElementById("navGrid");
-        nav.innerHTML = bank.map((_, i) => `
-            <div class="qdot ${i===currentIndex?'active':''} ${answers[i]!==undefined?'ok':''}" onclick="go(${i})">
-                ${i+1}
-            </div>`).join('');
-
-        // 儲存進度
-        localStorage.setItem(LS_STATE_PREFIX + CURRENT_URL, JSON.stringify({ answers, currentIndex }));
+        renderNav();
+        localStorage.setItem("ipas_save_"+libUrl, JSON.stringify({ answers, currentIdx, submitted }));
     }
 
-    window.handleChoose = (i) => { answers[currentIndex] = i; render(); };
-    window.go = (i) => { currentIndex = i; render(); };
-    document.getElementById("btnNext").onclick = () => { if(currentIndex < bank.length-1) {currentIndex++; render();} };
-    document.getElementById("btnPrev").onclick = () => { if(currentIndex > 0) {currentIndex--; render();} };
-    document.getElementById("btnReveal").onclick = () => { revealed[currentIndex] = true; render(); };
+    function renderNav() {
+        const nav = document.getElementById("navGrid");
+        nav.innerHTML = bank.map((q, i) => {
+            let cls = "qdot";
+            if(i === currentIdx) cls += " active";
+            if(submitted) {
+                if(answers[i] === q.ans) cls += " right";
+                else if(answers[i] !== undefined) cls += " bad";
+            } else if(answers[i] !== undefined) cls += " ok";
+            return `<div class="${cls}" onclick="go(${i})">${i+1}</div>`;
+        }).join('');
+    }
+
+    window.choose = (i) => { if(!submitted) { answers[currentIdx] = i; render(); } };
+    window.go = (i) => { currentIdx = i; render(); };
+    window.move = (s) => { let n = currentIdx + s; if(n>=0 && n<bank.length) { currentIdx = n; render(); } };
+    window.reveal = () => { revealed[currentIdx] = true; render(); };
+    
+    window.submitExam = () => {
+        if(!submitted && confirm("確定交卷？")) {
+            submitted = true; clearInterval(timerInterval);
+            let correct = bank.filter((q,i) => answers[i] === q.ans).length;
+            document.getElementById("finalScore").textContent = `總分：${correct*2} (${correct*2 >= 70 ? '通過' : '未通過'})`;
+            document.getElementById("finalScore").style.color = correct*2 >= 70 ? "var(--ok)" : "var(--danger)";
+            render();
+            location.reload(); // 刷新以套用交卷後 UI
+        }
+    };
 
     init();
 })();
