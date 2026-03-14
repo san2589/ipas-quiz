@@ -136,7 +136,7 @@
                     title:q.q||q.question, 
                     opts:q.a||q.options, 
                     ans:(typeof q.c==='number'?q.c-1:q.c) 
-                })).sort(()=>Math.random()-0.5).slice(0,50);
+                })).sort(()=>Math.random()-0.5).slice(0,100);
                 localStorage.setItem(LS_QUESTIONS_KEY, JSON.stringify(bank));
             }
             
