@@ -3,208 +3,149 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0f766e" />
-  <title>iPAS 測驗 - 題庫切換版</title>
-
+  <title>iPAS 測驗 - 2026 最新版</title>
   <style>
     :root { --bg:#0b1220; --card:#121a2a; --muted:#94a3b8; --text:#e5e7eb; --brand:#14b8a6; --danger:#ef4444; --ok:#22c55e; }
-    *{ box-sizing:border-box; }
-    body{ margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", Arial;
-          background:linear-gradient(180deg,#071023,#0b1220 40%); color:var(--text); }
+    body{ margin:0; font-family: system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--text); line-height:1.5; }
     .wrap{ max-width:1100px; margin:0 auto; padding:16px; }
-    .topbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; }
-    .brand{ font-weight:900; letter-spacing:.5px; }
-    .pill{ font-size:12px; color:#b6c2d6; background:rgba(148,163,184,.12); border:1px solid rgba(148,163,184,.22);
-          padding:6px 10px; border-radius:999px; display:inline-flex; gap:8px; align-items:center; }
-    .card{ background:rgba(18,26,42,.92); border:1px solid rgba(148,163,184,.18);
-          border-radius:16px; padding:16px; box-shadow: 0 10px 30px rgba(0,0,0,.28); }
-    .row{ display:flex; gap:10px; flex-wrap:wrap; }
-    .grid{ display:grid; grid-template-columns:1fr; gap:12px; }
-    @media (min-width: 920px){ .grid{ grid-template-columns: 1.25fr .75fr; } }
-    .muted{ color:var(--muted); }
-    .kbd{ font-family: ui-monospace, monospace; font-size:12px; padding:2px 6px; border-radius:8px; border:1px solid rgba(148,163,184,.25); background:rgba(2,6,23,.35); color:#d6dee9; }
-    .btn{ appearance:none; border:0; border-radius:12px; padding:10px 12px; cursor:pointer;
-          background:rgba(20,184,166,.14); color:#c7fff6; border:1px solid rgba(20,184,166,.45); font-weight:800; }
-    .btn:hover{ filter:brightness(1.05); }
-    .btn2{ background:rgba(148,163,184,.12); border:1px solid rgba(148,163,184,.28); color:#e5e7eb; }
-    .btnDanger{ background:rgba(239,68,68,.14); border:1px solid rgba(239,68,68,.45); color:#ffd2d2; font-weight:900; }
-    .btn-active { background:var(--brand) !important; color:white !important; border-color:var(--brand) !important; }
-    
-    .progress{ height:10px; background:rgba(148,163,184,.14); border-radius:999px; overflow:hidden; }
-    .bar{ height:100%; width:0%; background:linear-gradient(90deg, #14b8a6, #22c55e); transition: width 0.3s; }
-
-    .opt{ width:100%; text-align:left; padding:14px; border-radius:14px; border:1px solid rgba(148,163,184,.22);
-          background:rgba(2,6,23,.35); color:var(--text); cursor:pointer; font-size:18px; line-height:1.6; margin-bottom:10px;}
+    .card{ background:var(--card); border:1px solid rgba(148,163,184,0.2); border-radius:16px; padding:20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom: 15px; }
+    .btn{ border:0; border-radius:10px; padding:10px 16px; cursor:pointer; font-weight:800; transition: 0.2s; }
+    .btn-gray{ background:#334155; color:white; }
+    .btn-brand{ background:var(--brand); color:white; }
+    .btn-danger{ background:rgba(239,68,68,0.2); color:#ff8a8a; border:1px solid var(--danger); }
+    .btn-active{ outline: 3px solid white; box-shadow: 0 0 15px var(--brand); }
+    .opt{ width:100%; text-align:left; padding:15px; border-radius:12px; border:1px solid #334155; background:#1e293b; color:white; cursor:pointer; margin-bottom:10px; font-size:16px; }
     .opt:hover{ border-color:var(--brand); }
-    .opt.selected{ outline:2px solid var(--brand); }
-    .opt.correct{ outline:2px solid var(--ok); background:rgba(34,197,94,0.1); }
-    .opt.wrong{ outline:2px solid var(--danger); background:rgba(239,68,68,0.1); }
-
-    .toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:16px; padding:10px 12px;
-            background:rgba(2,6,23,.82); border:1px solid rgba(148,163,184,.25); border-radius:12px; color:#e5e7eb;
-            display:none; z-index:9999; }
-    .miniGrid{ display:grid; grid-template-columns: repeat(10, 1fr); gap:6px; margin-top:10px; }
-    .qdot{ border-radius:10px; padding:6px 0; text-align:center; font-size:12px; border:1px solid rgba(148,163,184,.22); cursor:pointer; }
-    .qdot.active{ outline:2px solid var(--brand); }
-    .qdot.ok{ background: rgba(34,197,94,0.2); border-color:var(--ok); }
+    .opt.selected{ border-color:var(--brand); background:rgba(20,184,166,0.1); }
+    .opt.correct{ border-color:var(--ok); background:rgba(34,197,94,0.1); }
+    .opt.wrong{ border-color:var(--danger); background:rgba(239,68,68,0.1); }
+    .progress-bg{ height:8px; background:#334155; border-radius:4px; overflow:hidden; margin:10px 0; }
+    .progress-bar{ height:100%; background:var(--brand); width:0%; transition:0.3s; }
+    .q-title{ font-size:20px; font-weight:900; margin-bottom:20px; }
   </style>
 </head>
-
 <body>
   <div class="wrap">
-    <div class="topbar">
-      <div class="brand">iPAS 測驗系統</div>
-      <div class="pill" id="statusPill"><span id="statusText">載入中...</span></div>
-    </div>
-
-    <div class="grid">
-      <div class="card">
-        <div class="row" style="justify-content:space-between; align-items:center;">
-          <div class="row">
-            <button class="btn2 btn" id="btnSetAll" onclick="switchQuiz('./ipas_questions_all.json')">全部題庫</button>
-            <button class="btn2 btn" id="btnSetAi" onclick="switchQuiz('./ipas_questions_ai.json')">AI 規劃師</button>
-          </div>
-          <button class="btnDanger btn" id="btnReset">清除進度</button>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;">
+        <div class="row">
+          <button id="btn-all" class="btn btn-gray" onclick="changeLib('./ipas_questions_all.json')">全部題庫</button>
+          <button id="btn-ai" class="btn btn-gray" onclick="changeLib('./ipas_questions_ai.json')">AI 應用規劃師</button>
         </div>
-
-        <div style="margin:20px 0;">
-          <div class="muted" id="qSourceDisplay" style="font-size:12px; margin-bottom:5px;"></div>
-          <div class="progress"><div class="bar" id="bar"></div></div>
-          <div class="row" style="justify-content:space-between; margin-top:8px;">
-            <div id="progressText">0 / 0</div>
-            <div id="scoreText">正確 0 · 錯誤 0</div>
-          </div>
-        </div>
-
-        <div id="questionArea"></div>
-
-        <div class="row" style="margin-top:20px; justify-content:space-between;">
-          <button class="btn2 btn" id="btnPrev">上一題</button>
-          <div class="row">
-            <button class="btn2 btn" id="btnReveal">看答案</button>
-            <button class="btn" id="btnNext">下一題</button>
-          </div>
-        </div>
+        <button class="btn btn-danger" onclick="resetProgress()">清除進度</button>
       </div>
 
-      <div class="card">
-        <div style="font-weight:900; margin-bottom:10px;">題目導覽</div>
-        <div id="navGrid" class="miniGrid"></div>
-        <div style="margin-top:20px; font-size:12px; color:var(--muted);">
-            提示：切換題庫會重新洗牌並重置進度。清除進度會保留目前題庫。
-        </div>
+      <div id="info" style="font-size:12px; color:var(--muted); margin-bottom:10px;">讀取中...</div>
+      <div class="progress-bg"><div id="bar" class="progress-bar"></div></div>
+      <div id="stat" style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:20px;">
+        <span id="prog-text">0 / 0</span>
+        <span id="score-text">正確: 0 | 錯誤: 0</span>
+      </div>
+
+      <div id="quiz-box"></div>
+
+      <div class="row" style="justify-content:space-between; margin-top:30px;">
+        <button class="btn btn-gray" onclick="move(-1)">上一題</button>
+        <button id="btn-reveal" class="btn btn-gray" onclick="reveal()">看答案</button>
+        <button class="btn btn-brand" onclick="move(1)">下一題</button>
       </div>
     </div>
   </div>
-  <div class="toast" id="toast"></div>
 
 <script>
 (() => {
-    // 1. 設定：優先從記憶抓取題庫路徑，預設 ai
-    let QUESTIONS_URL = localStorage.getItem("ipas_active_url") || "./ipas_questions_ai.json";
-    const LS_STATE = "ipas_quiz_state_v1";
-    const PICK_COUNT = 50;
+    // 優先讀取上次選擇的題庫，否則預設 AI
+    let currentLib = localStorage.getItem("active_lib") || "./ipas_questions_ai.json";
+    const LS_KEY = "quiz_save_" + currentLib; // 讓不同題庫進度分開存
 
-    let bank = [], questions = [], viewOrder = [], currentIndex = 0, state = { answers: {}, reveal: {} };
+    let questions = [], currentIndex = 0, answers = {}, revealed = {};
 
-    // 2. 切換題庫函數
-    window.switchQuiz = (url) => {
-        localStorage.setItem("ipas_active_url", url);
-        localStorage.removeItem(LS_STATE); // 切換題庫時重置作答進度
-        location.reload();
+    window.changeLib = (url) => {
+        localStorage.setItem("active_lib", url);
+        location.reload(); // 切換題庫會重刷
     };
 
-    // 3. 清除進度函數 (修正重點：不刪除 ipas_active_url)
-    document.getElementById('btnReset').onclick = () => {
-        if(confirm("確定要清除目前進度嗎？(將重新抽題)")){
-            localStorage.removeItem(LS_STATE);
+    window.resetProgress = () => {
+        if(confirm("確定要清除目前題庫的進度並重新出題嗎？")){
+            localStorage.removeItem(LS_KEY);
             location.reload();
         }
     };
 
-    function toast(msg){
-        const t = document.getElementById('toast');
-        t.textContent = msg; t.style.display = 'block';
-        setTimeout(()=> t.style.display='none', 2000);
-    }
-
-    async function init(){
-        // 顯示目前選中的按鈕樣式
-        if(QUESTIONS_URL.includes('ai')) document.getElementById('btnSetAi').classList.add('btn-active');
-        else document.getElementById('btnSetAll').classList.add('btn-active');
-        document.getElementById('qSourceDisplay').textContent = "讀取來源: " + QUESTIONS_URL;
+    async function init() {
+        // 標記目前按鈕
+        if(currentLib.includes("ai")) document.getElementById("btn-ai").classList.add("btn-active");
+        else document.getElementById("btn-all").classList.add("btn-active");
+        
+        document.getElementById("info").textContent = "當前題庫：" + currentLib;
 
         try {
-            const res = await fetch(QUESTIONS_URL + "?v=" + Date.now());
-            const raw = await res.json();
+            const res = await fetch(currentLib + "?t=" + Date.now()); // 加時間戳防止快取
+            const data = await res.json();
             
-            // 處理題庫
-            bank = raw.map((q, i) => ({
-                id: q.id || (i+1),
+            // 隨機抽 50 題
+            questions = data.sort(() => Math.random() - 0.5).slice(0, 50).map((q, i) => ({
+                id: q.id || i,
                 title: q.q || q.question,
-                options: q.a || q.options,
-                ans: (typeof q.c === 'number') ? q.c - 1 : q.c 
+                opts: q.a || q.options,
+                ans: (typeof q.c === 'number' ? q.c - 1 : q.c)
             }));
 
-            // 隨機抽 50 題 (簡易洗牌)
-            questions = bank.sort(() => Math.random() - 0.5).slice(0, PICK_COUNT);
-            
             // 讀取進度
-            const saved = localStorage.getItem(LS_STATE);
-            if(saved) {
-                const p = JSON.parse(saved);
-                state.answers = p.answers || {};
-                currentIndex = p.currentIndex || 0;
-            }
+            const saved = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
+            answers = saved.answers || {};
+            currentIndex = saved.currentIndex || 0;
 
-            document.getElementById('statusText').textContent = "就緒";
             render();
-        } catch(e) {
-            document.getElementById('statusText').textContent = "載入失敗";
-            console.error(e);
+        } catch (e) {
+            document.getElementById("quiz-box").innerHTML = "題庫載入失敗，請確認檔案是否存在。";
         }
     }
 
-    function render(){
+    function render() {
         const q = questions[currentIndex];
-        if(!q) return;
+        const box = document.getElementById("quiz-box");
+        const isRev = revealed[currentIndex];
+        const userAns = answers[currentIndex];
 
-        const area = document.getElementById('questionArea');
-        const chosen = state.answers[currentIndex];
-        const isRevealed = !!state.reveal[currentIndex];
-
-        let html = `<div style="font-weight:900; margin-bottom:15px;">${currentIndex + 1}. ${q.title}</div>`;
-        q.options.forEach((opt, i) => {
+        let html = `<div class="q-title">${currentIndex + 1}. ${q.title}</div>`;
+        q.opts.forEach((opt, i) => {
             let cls = "opt";
-            if(chosen === i) cls += " selected";
-            if(isRevealed) {
-                if(i === q.ans) cls += " correct";
-                else if(chosen === i) cls += " wrong";
+            if (userAns === i) cls += " selected";
+            if (isRev) {
+                if (i === q.ans) cls += " correct";
+                else if (userAns === i) cls += " wrong";
             }
-            html += `<button class="${cls}" onclick="choose(${i})">${opt}</button>`;
+            html += `<button class="${cls}" onclick="handleChoose(${i})">${opt}</button>`;
         });
-        area.innerHTML = html;
+        box.innerHTML = html;
 
-        // 更新進度條
-        document.getElementById('bar').style.width = `${((currentIndex+1)/PICK_COUNT)*100}%`;
-        document.getElementById('progressText').textContent = `${currentIndex + 1} / ${PICK_COUNT}`;
+        // 更新 UI
+        document.getElementById("bar").style.width = ((currentIndex + 1) / questions.length * 100) + "%";
+        document.getElementById("prog-text").textContent = `第 ${currentIndex + 1} / ${questions.length} 題`;
         
-        // 更新導覽點
-        const nav = document.getElementById('navGrid');
-        nav.innerHTML = questions.map((_, i) => `<div class="qdot ${i===currentIndex?'active':''} ${state.answers[i]!==undefined?'ok':''}" onclick="go(${i})">${i+1}</div>`).join('');
-        
-        // 存檔
-        localStorage.setItem(LS_STATE, JSON.stringify({ answers: state.answers, currentIndex }));
+        // 自動存檔
+        localStorage.setItem(LS_KEY, JSON.stringify({ answers, currentIndex }));
     }
 
-    window.choose = (i) => {
-        state.answers[currentIndex] = i;
+    window.handleChoose = (i) => {
+        answers[currentIndex] = i;
         render();
     };
-    window.go = (i) => { currentIndex = i; render(); };
-    document.getElementById('btnNext').onclick = () => { if(currentIndex < PICK_COUNT-1) {currentIndex++; render();} };
-    document.getElementById('btnPrev').onclick = () => { if(currentIndex > 0) {currentIndex--; render();} };
-    document.getElementById('btnReveal').onclick = () => { state.reveal[currentIndex] = true; render(); };
+
+    window.move = (step) => {
+        let next = currentIndex + step;
+        if (next >= 0 && next < questions.length) {
+            currentIndex = next;
+            render();
+        }
+    };
+
+    window.reveal = () => {
+        revealed[currentIndex] = true;
+        render();
+    };
 
     init();
 })();
