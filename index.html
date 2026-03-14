@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0f766e" />
-  <title>iPAS 測驗 - 專業版 (含考試模式)</title>
+  <title>iPAS 測驗 - 修正版</title>
   <style>
     :root { --bg:#0b1220; --card:#121a2a; --muted:#94a3b8; --text:#e5e7eb; --brand:#14b8a6; --danger:#ef4444; --ok:#22c55e; }
     *{ box-sizing:border-box; }
@@ -91,13 +91,25 @@
 <script>
 (() => {
     let libUrl = localStorage.getItem("ipas_active_url") || "./ipas_questions_ai.json";
+    // 關鍵修正：將儲存的 KEY 加上題庫名稱以區分
+    const LS_STATE_KEY = "ipas_save_" + libUrl;
+    const LS_QUESTIONS_KEY = "ipas_questions_data_" + libUrl;
+
     let bank = [], currentIdx = 0, answers = {}, revealed = {}, submitted = false;
-    let mode = localStorage.getItem("quiz_mode") || "practice"; // 預設練習模式
-    let timeLeft = parseInt(localStorage.getItem("exam_time")) || 5400; // 90分
+    let mode = localStorage.getItem("quiz_mode") || "practice";
+    let timeLeft = parseInt(localStorage.getItem("exam_time")) || 5400;
     let timerInterval = null;
 
     window.switchLib = (url) => { localStorage.setItem("ipas_active_url", url); location.reload(); };
-    window.clearProgress = () => { if(confirm("重置進度？")){ localStorage.removeItem("ipas_save_"+libUrl); localStorage.removeItem("exam_time"); location.reload(); }};
+    
+    window.clearProgress = () => { 
+        if(confirm("確定要重置進度並重新抽題嗎？")){ 
+            localStorage.removeItem(LS_STATE_KEY); 
+            localStorage.removeItem(LS_QUESTIONS_KEY); 
+            localStorage.removeItem("exam_time"); 
+            location.reload(); 
+        }
+    };
 
     window.switchMode = (newMode) => {
         if(submitted) return alert("已交卷無法切換模式");
@@ -107,31 +119,44 @@
     };
 
     async function init() {
-        // UI 狀態同步
         document.getElementById(libUrl.includes("ai")?"libAi":"libAll").classList.add("btn-active");
         document.getElementById(mode==="exam"?"modeBtnExam":"modeBtnPractice").classList.add("btn-active");
         document.getElementById("modeStatus").textContent = mode === "exam" ? "考試模式" : "練習模式";
         
         try {
-            const res = await fetch(libUrl + "?v=" + Date.now());
-            const data = await res.json();
-            bank = data.map((q,i)=>({ id:q.id||(i+1), title:q.q||q.question, opts:q.a||q.options, ans:(typeof q.c==='number'?q.c-1:q.c) })).sort(()=>Math.random()-0.5).slice(0,50);
+            // 關鍵修正：讀取固定題目
+            const cachedQuestions = localStorage.getItem(LS_QUESTIONS_KEY);
+            if (cachedQuestions) {
+                bank = JSON.parse(cachedQuestions);
+            } else {
+                const res = await fetch(libUrl + "?v=" + Date.now());
+                const data = await res.json();
+                bank = data.map((q,i)=>({ 
+                    id:q.id||(i+1), 
+                    title:q.q||q.question, 
+                    opts:q.a||q.options, 
+                    ans:(typeof q.c==='number'?q.c-1:q.c) 
+                })).sort(()=>Math.random()-0.5).slice(0,50);
+                localStorage.setItem(LS_QUESTIONS_KEY, JSON.stringify(bank));
+            }
             
-            const saved = JSON.parse(localStorage.getItem("ipas_save_"+libUrl) || "{}");
+            const saved = JSON.parse(localStorage.getItem(LS_STATE_KEY) || "{}");
             answers = saved.answers || {};
             currentIdx = saved.currentIdx || 0;
             submitted = saved.submitted || false;
 
             if(mode === "exam" && !submitted) startTimer();
-            if(submitted) { document.getElementById("btnSubmit").disabled = true; document.getElementById("resultBox").style.display="block"; }
-            
+            if(submitted) { 
+                document.getElementById("btnSubmit").disabled = true; 
+                document.getElementById("resultBox").style.display="block"; 
+            }
             render();
         } catch(e) { document.getElementById("quizArea").innerHTML = "題庫載入失敗"; }
     }
 
     function startTimer() {
         timerInterval = setInterval(() => {
-            if(timeLeft <= 0) { clearInterval(timerInterval); submitExam(); return; }
+            if(timeLeft <= 0) { clearInterval(timerInterval); submitExam(true); return; }
             timeLeft--;
             localStorage.setItem("exam_time", timeLeft);
             const m = Math.floor(timeLeft/60), s = timeLeft%60;
@@ -141,12 +166,11 @@
 
     function render() {
         const q = bank[currentIdx];
+        if(!q) return;
         const isRev = (mode === "practice" && revealed[currentIdx]) || submitted;
-        
-        // 考試模式下未交卷不能點看答案
         document.getElementById("btnReveal").disabled = (mode === "exam" && !submitted);
 
-        let html = `<div style="font-size:20px; font-weight:900; margin-bottom:15px;">${currentIdx+1}. ${q.title}</div>`;
+        let html = `<div style="font-size:20px; font-weight:900; margin-bottom:15px;">${currentIdx+1}. [${q.id}] ${q.title}</div>`;
         q.opts.forEach((opt, i) => {
             let cls = "opt";
             if(answers[currentIdx] === i) cls += " selected";
@@ -161,7 +185,8 @@
         document.getElementById("progressText").textContent = `${currentIdx+1} / ${bank.length}`;
         
         renderNav();
-        localStorage.setItem("ipas_save_"+libUrl, JSON.stringify({ answers, currentIdx, submitted }));
+        updateScore();
+        localStorage.setItem(LS_STATE_KEY, JSON.stringify({ answers, currentIdx, submitted }));
     }
 
     function renderNav() {
@@ -177,19 +202,25 @@
         }).join('');
     }
 
+    function updateScore() {
+        let correct = bank.filter((q,i) => answers[i] === q.ans).length;
+        if(submitted) {
+            document.getElementById("finalScore").textContent = `總分：${correct*2} (${correct*2 >= 70 ? '通過' : '未通過'})`;
+            document.getElementById("finalScore").style.color = correct*2 >= 70 ? "var(--ok)" : "var(--danger)";
+        }
+    }
+
     window.choose = (i) => { if(!submitted) { answers[currentIdx] = i; render(); } };
     window.go = (i) => { currentIdx = i; render(); };
     window.move = (s) => { let n = currentIdx + s; if(n>=0 && n<bank.length) { currentIdx = n; render(); } };
     window.reveal = () => { revealed[currentIdx] = true; render(); };
     
-    window.submitExam = () => {
-        if(!submitted && confirm("確定交卷？")) {
-            submitted = true; clearInterval(timerInterval);
-            let correct = bank.filter((q,i) => answers[i] === q.ans).length;
-            document.getElementById("finalScore").textContent = `總分：${correct*2} (${correct*2 >= 70 ? '通過' : '未通過'})`;
-            document.getElementById("finalScore").style.color = correct*2 >= 70 ? "var(--ok)" : "var(--danger)";
-            render();
-            location.reload(); // 刷新以套用交卷後 UI
+    window.submitExam = (isAuto = false) => {
+        if(!submitted && (isAuto || confirm("確定要交卷嗎？"))) {
+            submitted = true; 
+            clearInterval(timerInterval);
+            localStorage.setItem(LS_STATE_KEY, JSON.stringify({ answers, currentIdx, submitted }));
+            location.reload(); 
         }
     };
 
