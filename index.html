@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="utf-8">
-    <title>iPAS 模擬考系統 - 最終救援版</title>
+    <title>iPAS 模擬考系統 (修復完成)</title>
     <style>
         :root { --bg:#0f172a; --card:#1e293b; --brand:#2dd4bf; --text:#f1f5f9; }
         body { background:var(--bg); color:var(--text); font-family: sans-serif; margin:0; padding:20px; }
@@ -10,7 +10,7 @@
         .card { background:var(--card); padding:20px; border-radius:12px; border:1px solid #334155; margin-bottom:15px; }
         .btn { background:#334155; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold; margin-right:5px; margin-bottom:5px; }
         .btn-active { background:var(--brand) !important; color:#0f172a !important; }
-        .opt { width:100%; text-align:left; padding:15px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:10px; cursor:pointer; }
+        .opt { width:100%; text-align:left; padding:15px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:10px; cursor:pointer; font-size:16px; }
         .opt.selected { border-color:var(--brand); background:rgba(45,212,191,0.1); }
         .opt.correct { background:rgba(34,197,94,0.2); border-color:#22c55e; }
         .opt.wrong { background:rgba(251,113,133,0.2); border-color:#fb7185; }
@@ -24,9 +24,9 @@
 <div class="wrap">
     <div class="card">
         <h2 style="color:var(--brand); margin-top:0;">iPAS 模擬考系統</h2>
-        <button class="btn" id="btnAi" onclick="fetchData('ipas_questions_ai.json')">AI 規劃師</button>
-        <button class="btn" id="btnAll" onclick="fetchData('ipas_questions_all.json')">全部題庫</button>
-        <div id="msg" style="margin-top:10px; font-size:13px; color:#94a3b8;">請點擊按鈕載入題庫</div>
+        <button class="btn" id="btnAi" onclick="fetchData('ipas_questions_ai.json')">AI 規劃師 (A/B/C/D 版)</button>
+        <button class="btn" id="btnAll" onclick="fetchData('ipas_questions_all.json')">全部題庫 (1/2/3/4 版)</button>
+        <div id="msg" style="margin-top:10px; font-size:13px; color:#94a3b8;">請確保 JSON 檔案放在 HTML 旁邊</div>
     </div>
 
     <div id="quizBox" style="display:none;">
@@ -37,7 +37,7 @@
                 <button class="btn" onclick="showHelp()">看解析</button>
                 <button class="btn" onclick="move(1)">下一題</button>
             </div>
-            <button class="btn" onclick="finish()" style="width:100%; margin-top:10px; background:var(--brand); color:#000;">交卷</button>
+            <button class="btn" onclick="finish()" style="width:100%; margin-top:10px; background:var(--brand); color:#000;">交卷看分數</button>
         </div>
         <div class="card">
             <div id="navGrid" class="nav-grid"></div>
@@ -50,59 +50,44 @@ let bank = [], current = 0, answers = {}, revealed = {}, isDone = false;
 
 async function fetchData(fileName) {
     const msg = document.getElementById('msg');
-    msg.textContent = "正在連線到 " + fileName + "...";
+    msg.textContent = "讀取中：" + fileName;
     
     document.getElementById('btnAi').classList.toggle('btn-active', fileName.includes('ai'));
     document.getElementById('btnAll').classList.toggle('btn-active', fileName.includes('all'));
 
     try {
         const res = await fetch(fileName + "?v=" + Date.now());
-        if (!res.ok) throw new Error("找不到檔案：" + fileName);
+        if (!res.ok) throw new Error("讀不到檔案 " + fileName);
+        const data = await res.json(); // 這次直接用 JSON 解析
         
-        const text = await res.text();
-        const blocks = text.match(/\{[\s\S]*?\}/g);
-        if (!blocks) throw new Error("檔案內容格式不對，找不到任何題項。");
-
-        const letterMap = {"A":0, "B":1, "C":2, "D":3};
         let temp = [];
+        const letterMap = {"A":0, "B":1, "C":2, "D":3};
 
-        blocks.forEach(b => {
-            try {
-                let s = b.trim().replace(/,$/, "");
-                if(!s.endsWith("}")) s += "}";
-                const item = JSON.parse(s);
+        data.forEach(item => {
+            let parsed = { q: "", opts: [], ans: 0, exp: "" };
 
-                let parsed = { q: "", opts: [], ans: 0, exp: "" };
+            // 針對 ai.json 的格式 (有 question, options, answer)
+            if (item.options) {
+                parsed.q = item.question;
+                parsed.opts = [item.options.A, item.options.B, item.options.C, item.options.D];
+                parsed.ans = letterMap[item.answer];
+                parsed.exp = item.analysis;
+            } 
+            // 針對 all.json 的格式 (有 q, a, c)
+            else if (item.a) {
+                parsed.q = item.q;
+                parsed.opts = item.a;
+                parsed.ans = parseInt(item.c) - 1; // 數字 1-4 轉索引 0-3
+                parsed.exp = item.e;
+            }
 
-                // --- 寬鬆判定邏輯 ---
-                // 1. 抓題目 (question 或 q)
-                parsed.q = item.question || item.q || "";
-                
-                // 2. 抓選項 (options 物件 或 a 陣列)
-                if (item.options && typeof item.options === 'object') {
-                    parsed.opts = [item.options.A, item.options.B, item.options.C, item.options.D];
-                    parsed.ans = letterMap[item.answer] !== undefined ? letterMap[item.answer] : 0;
-                } else if (Array.isArray(item.a)) {
-                    parsed.opts = item.a;
-                    parsed.ans = (parseInt(item.c) - 1) || 0;
-                }
-
-                // 3. 抓解析
-                parsed.exp = item.analysis || item.e || "";
-
-                // 只要有題目跟至少兩個選項就存進去
-                if (parsed.q && parsed.opts && parsed.opts.length >= 2) {
-                    temp.push(parsed);
-                }
-            } catch(e) { }
+            if (parsed.q) temp.push(parsed);
         });
-
-        if (temp.length === 0) throw new Error("解析完成，但找不到任何題目。請確認檔案內容格式。");
 
         bank = temp.sort(() => Math.random() - 0.5).slice(0, 50);
         current = 0; answers = {}; revealed = {}; isDone = false;
         document.getElementById('quizBox').style.display = 'block';
-        msg.textContent = "✅ 已從 " + temp.length + " 題中隨機抽取 50 題";
+        msg.textContent = "✅ 已成功載入 " + bank.length + " 題";
         render();
     } catch (e) {
         msg.innerHTML = "<span style='color:#fb7185'>❌ 錯誤: " + e.message + "</span>";
@@ -111,10 +96,8 @@ async function fetchData(fileName) {
 
 function render() {
     const item = bank[current];
-    if (!item) return;
-    
     const show = isDone || revealed[current];
-    let html = `<h3 style="line-height:1.4;">Q${current + 1}. ${item.q}</h3>`;
+    let html = `<h3 style="line-height:1.5">${current + 1}. ${item.q}</h3>`;
     
     item.opts.forEach((opt, i) => {
         let cls = "opt";
@@ -126,7 +109,7 @@ function render() {
         html += `<button class="${cls}" onclick="pick(${i})">${opt}</button>`;
     });
 
-    if (show) html += `<div style="margin-top:15px; padding:15px; background:rgba(45,212,191,0.1); border-left:4px solid var(--brand); border-radius:4px;"><b>💡 解析：</b><br>${item.exp || "此題無解析"}</div>`;
+    if (show) html += `<div style="margin-top:15px; padding:15px; background:rgba(45,212,191,0.05); border-left:4px solid var(--brand);"><b>💡 解析：</b><br>${item.exp || "此題無解析"}</div>`;
     document.getElementById('qArea').innerHTML = html;
 
     document.getElementById('navGrid').innerHTML = bank.map((_, i) => {
@@ -138,7 +121,7 @@ function render() {
 function pick(i) { if(!isDone) { answers[current] = i; render(); } }
 function move(s) { let n = current + s; if(n>=0 && n<bank.length) { current = n; render(); } }
 function showHelp() { revealed[current] = true; render(); }
-function finish() { if(confirm("確定交卷計算總分？")) { isDone = true; render(); } }
+function finish() { if(confirm("確定交卷？")) { isDone = true; render(); } }
 </script>
 </body>
 </html>
