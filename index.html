@@ -1,135 +1,136 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>iPAS 模擬考 - 終極相容版</title>
-  <style>
-    :root { --bg:#0b1220; --card:#121a2a; --brand:#14b8a6; --danger:#ef4444; --ok:#22c55e; --text:#e5e7eb; }
-    body { background:var(--bg); color:var(--text); font-family:sans-serif; margin:0; padding:15px; }
-    .wrap { max-width:1000px; margin:0 auto; }
-    .card { background:var(--card); border:1px solid rgba(148,163,184,0.2); border-radius:12px; padding:20px; margin-bottom:15px; }
-    .btn { background:rgba(20,184,166,0.15); border:1px solid var(--brand); color:#c7fff6; padding:10px 15px; border-radius:8px; cursor:pointer; font-weight:bold; }
-    .btn:hover { background:var(--brand); color:#000; }
-    .opt { width:100%; text-align:left; padding:12px; border:1px solid #444; background:rgba(0,0,0,0.2); color:#fff; border-radius:8px; margin-bottom:10px; cursor:pointer; }
-    .opt.selected { border-color:var(--brand); background:rgba(20,184,166,0.1); }
-    .opt.correct { background:rgba(34,197,94,0.2); border-color:var(--ok); }
-    .opt.wrong { background:rgba(239,68,68,0.2); border-color:var(--danger); }
-    .miniGrid { display:grid; grid-template-columns: repeat(auto-fill, minmax(35px, 1fr)); gap:5px; margin-top:10px; }
-    .qdot { border:1px solid #444; text-align:center; padding:5px 0; border-radius:5px; font-size:12px; cursor:pointer; }
-    .qdot.ok { border-color:var(--brand); background:rgba(20,184,166,0.1); }
-    .qdot.active { background:var(--brand); color:#000; }
-    .exp { margin-top:15px; padding:12px; background:rgba(255,255,255,0.05); border-left:4px solid var(--brand); font-size:0.9rem; }
-    #fileInput { display: none; }
-  </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>iPAS 模擬考系統 - 穩定修復版</title>
+    <style>
+        :root { --bg:#0f172a; --card:#1e293b; --brand:#2dd4bf; --text:#f1f5f9; --danger:#fb7185; }
+        body { background:var(--bg); color:var(--text); font-family: sans-serif; margin:0; padding:15px; }
+        .wrap { max-width:800px; margin:0 auto; }
+        .card { background:var(--card); padding:20px; border-radius:12px; margin-bottom:15px; border:1px solid #334155; }
+        .btn { background:#334155; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold; }
+        .btn:hover { background: #475569; }
+        .btn-active { background:var(--brand) !important; color:#0f172a !important; }
+        .opt { width:100%; text-align:left; padding:15px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:10px; cursor:pointer; font-size:16px; }
+        .opt.selected { border-color:var(--brand); background:rgba(45,212,191,0.1); }
+        .opt.correct { background:rgba(34,197,94,0.2); border-color:#22c55e; }
+        .opt.wrong { background:rgba(251,113,133,0.2); border-color:var(--danger); }
+        .nav-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(35px, 1fr)); gap:5px; margin-top:10px; }
+        .dot { background:#0f172a; border:1px solid #334155; text-align:center; padding:5px 0; border-radius:5px; cursor:pointer; font-size:12px; }
+        .dot.active { border-color:var(--brand); color:var(--brand); }
+        .dot.done { background:#334155; }
+        .exp { margin-top:15px; padding:15px; background:rgba(255,255,255,0.05); border-left:4px solid var(--brand); font-size:0.95rem; }
+    </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="card">
-    <h2 style="margin-top:0; color:var(--brand);">iPAS 題庫載入器</h2>
-    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <button class="btn" onclick="document.getElementById('fileInput').click()">📁 點我選擇題庫 JSON 檔</button>
-      <input type="file" id="fileInput" accept=".json,.txt" onchange="handleFile(this.files[0])">
-      <div id="loadStatus" style="line-height:40px; font-size:14px; color:#aaa;">尚未載入檔案</div>
-    </div>
-    <p style="font-size:12px; color:#888;">* 支援 ipas_questions_ai.json 或 ipas_questions_all.json 格式</p>
-  </div>
-
-  <div id="quizContainer" style="display:none;">
     <div class="card">
-        <div id="barWrap" style="height:5px; background:#333; margin-bottom:15px;"><div id="bar" style="height:100%; background:var(--brand); width:0%;"></div></div>
-        <div id="quizArea"></div>
-        <div style="display:flex; justify-content:space-between; margin-top:20px;">
-            <button class="btn" onclick="move(-1)">上一題</button>
-            <div>
-                <button class="btn" id="btnReveal" onclick="reveal()">看答案</button>
-                <button class="btn" onclick="submit()" style="background:var(--ok); color:#000; border:none;">交卷</button>
-            </div>
-            <button class="btn" onclick="move(1)">下一題</button>
+        <h2 style="margin:0 0 15px 0; color:var(--brand);">iPAS 題庫練習</h2>
+        <div style="display:flex; gap:10px;">
+            <button class="btn" id="btnAi" onclick="loadLib('./ipas_questions_ai.json')">AI 規劃師</button>
+            <button class="btn" id="btnAll" onclick="loadLib('./ipas_questions_all.json')">全部題庫</button>
         </div>
     </div>
-    <div class="card">
-        <div style="margin-bottom:10px; font-weight:bold;">題號導航</div>
-        <div id="navGrid" class="miniGrid"></div>
+
+    <div id="quizBox" style="display:none;">
+        <div class="card">
+            <div id="questionArea"></div>
+            <div style="display:flex; justify-content:space-between; margin-top:20px;">
+                <button class="btn" onclick="go(-1)">上一題</button>
+                <button class="btn" id="btnReveal" onclick="showAns()">看解析</button>
+                <button class="btn" onclick="go(1)">下一題</button>
+            </div>
+            <button class="btn" onclick="submit()" style="width:100%; margin-top:10px; background:var(--brand); color:#000;">交卷看分數</button>
+        </div>
+        <div class="card">
+            <div style="font-weight:bold; margin-bottom:10px;">題目導航</div>
+            <div id="navGrid" class="nav-grid"></div>
+        </div>
     </div>
-  </div>
 </div>
 
 <script>
-let bank = [], currentIdx = 0, answers = {}, revealed = {}, submitted = false;
+let bank = [], current = 0, userAns = {}, isSubmitted = false, isRevealed = {};
 
-function handleFile(file) {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const text = e.target.result;
-            // 使用正則表達式解析，解決 JSON 格式微小錯誤
-            const matches = text.match(/\{[\s\S]*?\}/g);
-            if (!matches) throw new Error("檔案中找不到題目內容");
+async function loadLib(url) {
+    // 介面更新
+    document.getElementById('btnAi').classList.toggle('btn-active', url.includes('ai'));
+    document.getElementById('btnAll').classList.toggle('btn-active', url.includes('all'));
+    
+    try {
+        const res = await fetch(url + '?v=' + Date.now());
+        if (!res.ok) throw new Error("找不到檔案，請確認檔案放在 index.html 旁邊");
+        
+        const raw = await res.text();
+        const matches = raw.match(/\{[\s\S]*?\}/g); // 寬鬆抓取大括號物件
+        
+        let temp = [];
+        const letterMap = {"A":0, "B":1, "C":2, "D":3};
 
-            let tempBank = [];
-            const ansMap = {"A":0, "B":1, "C":2, "D":3};
+        matches.forEach(m => {
+            try {
+                let clean = m.trim().replace(/,$/, "");
+                if(!clean.endsWith("}")) clean += "}";
+                const q = JSON.parse(clean);
+                
+                let title = q.question || q.q;
+                let opts = [];
+                let ans = 0;
+                let exp = q.analysis || q.e || "";
 
-            matches.forEach(m => {
-                try {
-                    let clean = m.trim().replace(/,$/, "");
-                    if(!clean.endsWith("}")) clean += "}";
-                    const q = JSON.parse(clean);
-                    
-                    // 相容兩種格式
-                    let title = q.question || q.q;
-                    let opts = (q.options && !Array.isArray(q.options)) ? [q.options.A, q.options.B, q.options.C, q.options.D] : q.a;
-                    let ans = (q.answer !== undefined) ? ansMap[q.answer] : (parseInt(q.c) - 1);
-                    let exp = q.analysis || q.e || "無解析";
+                // 判斷是哪種格式
+                if (q.options) { // AI 格式
+                    opts = [q.options.A, q.options.B, q.options.C, q.options.D];
+                    ans = letterMap[q.answer];
+                } else if (q.a) { // ALL 格式
+                    opts = q.a;
+                    ans = parseInt(q.c) - 1;
+                }
 
-                    if (title && opts) {
-                        tempBank.push({ title, opts, ans, exp });
-                    }
-                } catch(err) {}
-            });
+                if (title && opts.length > 0) temp.push({ title, opts, ans, exp });
+            } catch(e) {}
+        });
 
-            if (tempBank.length === 0) throw new Error("解析失敗，請確認檔案格式");
-            
-            bank = tempBank.sort(() => Math.random() - 0.5).slice(0, 50);
-            document.getElementById("loadStatus").textContent = "✅ 成功載入 " + bank.length + " 題！";
-            document.getElementById("quizContainer").style.display = "block";
-            currentIdx = 0; answers = {}; revealed = {}; submitted = false;
-            render();
-        } catch(err) {
-            alert("錯誤: " + err.message);
-        }
-    };
-    reader.readAsText(file);
+        bank = temp.sort(() => Math.random() - 0.5).slice(0, 50);
+        current = 0; userAns = {}; isSubmitted = false; isRevealed = {};
+        document.getElementById('quizBox').style.display = 'block';
+        render();
+    } catch (e) {
+        alert(e.message);
+    }
 }
 
 function render() {
-    const q = bank[currentIdx];
-    const isShow = submitted || revealed[currentIdx];
-    let html = `<h3>Q${currentIdx + 1}: ${q.title}</h3>`;
+    const q = bank[current];
+    const show = isSubmitted || isRevealed[current];
+    let html = `<h3>${current + 1}. ${q.title}</h3>`;
     q.opts.forEach((opt, i) => {
         let cls = "opt";
-        if (answers[currentIdx] === i) cls += " selected";
-        if (isShow) cls += (i === q.ans ? " correct" : (answers[currentIdx] === i ? " wrong" : ""));
-        html += `<button class="${cls}" onclick="choose(${i})">${opt}</button>`;
+        if (userAns[current] === i) cls += " selected";
+        if (show) {
+            if (i === q.ans) cls += " correct";
+            else if (userAns[current] === i) cls += " wrong";
+        }
+        html += `<button class="${cls}" onclick="pick(${i})">${opt}</button>`;
     });
-    if (isShow) html += `<div class="exp">💡 解析：${q.exp}</div>`;
-    document.getElementById("quizArea").innerHTML = html;
-    document.getElementById("bar").style.width = ((currentIdx + 1) / bank.length * 100) + "%";
-    renderNav();
-}
-
-function renderNav() {
-    document.getElementById("navGrid").innerHTML = bank.map((_, i) => {
-        let cls = "qdot" + (i === currentIdx ? " active" : (answers[i] !== undefined ? " ok" : ""));
-        return `<div class="${cls}" onclick="currentIdx=${i};render()">${i+1}</div>`;
+    if (show) html += `<div class="exp"><b>💡 解析：</b><br>${q.exp || "此題無解析"}</div>`;
+    document.getElementById('questionArea').innerHTML = html;
+    
+    // 更新導航
+    document.getElementById('navGrid').innerHTML = bank.map((_, i) => {
+        let cls = "dot" + (i === current ? " active" : (userAns[i] !== undefined ? " done" : ""));
+        return `<div class="${cls}" onclick="current=${i};render()">${i+1}</div>`;
     }).join('');
 }
 
-function choose(i) { if(!submitted) { answers[currentIdx] = i; render(); } }
-function move(step) { let next = currentIdx + step; if(next >= 0 && next < bank.length) { currentIdx = next; render(); } }
-function reveal() { revealed[currentIdx] = true; render(); }
-function submit() { if(confirm("確定交卷看分數？")) { submitted = true; render(); } }
+function pick(i) { if(!isSubmitted) { userAns[current] = i; render(); } }
+function go(s) { let n = current + s; if(n>=0 && n<bank.length) { current = n; render(); } }
+function showAns() { isRevealed[current] = true; render(); }
+function submit() { if(confirm("確定交卷？")) { isSubmitted = true; render(); } }
+
+// 預設載入 AI 題庫
+loadLib('./ipas_questions_ai.json');
 </script>
 </body>
 </html>
