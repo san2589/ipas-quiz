@@ -118,31 +118,6 @@
     },
     "answer": "B",
     "analysis": "Transformer 架構中的自注意力機制 (Self-Attention) 是現代大型語言模型的基石。"
-  }
-]
-{
-    "id": 734,
-    "question": "關於 AI，下列敘述何者正確？",
-    "options": {
-      "A": "AI 僅能處理結構化數據的分析",
-      "B": "AI 涵蓋多種專業領域與技術",
-      "C": "AI 系統只能在學術研究中應用",
-      "D": "AI 無法應用於金融領域"
-    },
-    "answer": "B",
-    "analysis": "AI 是一門跨領域科學，包含機器學習、自然語言處理、電腦視覺等技術，並廣泛應用於金融、醫療、製造等實務產業。"
-  },
-  {
-    "id": 735,
-    "question": "下列何者最適合訓練電腦下圍棋、自動駕駛等動態重複地互動的問題？",
-    "options": {
-      "A": "監督式學習(Supervised Learning)",
-      "B": "非監督式學習(Unsupervised Learning)",
-      "C": "半監督式學習(Semi-supervised Learning)",
-      "D": "強化學習(Reinforcement Learning)"
-    },
-    "answer": "D",
-    "analysis": "強化學習（Reinforcement Learning）透過 Agent 與環境互動，根據回饋的獎勵或懲罰來學習最佳決策路徑，適合處理具備序列決策特性的動態問題。"
   },
   {
     "id": 11,
@@ -10994,5 +10969,30 @@
     },
     "answer": "B",
     "analysis": "AGI (Artificial General Intelligence) 是 AI 研究的終極目標之一。"
+  },
+   
+{
+    "id": 940,
+    "question": "關於 AI，下列敘述何者正確？",
+    "options": {
+      "A": "AI 僅能處理結構化數據的分析",
+      "B": "AI 涵蓋多種專業領域與技術",
+      "C": "AI 系統只能在學術研究中應用",
+      "D": "AI 無法應用於金融領域"
+    },
+    "answer": "B",
+    "analysis": "AI 是一門跨領域科學，包含機器學習、自然語言處理、電腦視覺等技術，並廣泛應用於金融、醫療、製造等實務產業。"
+  },
+  {
+    "id": 941,
+    "question": "下列何者最適合訓練電腦下圍棋、自動駕駛等動態重複地互動的問題？",
+    "options": {
+      "A": "監督式學習(Supervised Learning)",
+      "B": "非監督式學習(Unsupervised Learning)",
+      "C": "半監督式學習(Semi-supervised Learning)",
+      "D": "強化學習(Reinforcement Learning)"
+    },
+    "answer": "D",
+    "analysis": "強化學習（Reinforcement Learning）透過 Agent 與環境互動，根據回饋的獎勵或懲罰來學習最佳決策路徑，適合處理具備序列決策特性的動態問題。"
   }
 ]  
