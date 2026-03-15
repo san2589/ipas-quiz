@@ -10993,4 +10993,4 @@
     "answer": "D",
     "analysis": "強化學習（Reinforcement Learning）透過 Agent 與環境互動，根據回饋的獎勵或懲罰來學習最佳決策路徑，適合處理具備序列決策特性的動態問題。"
   }
-]  
+]
