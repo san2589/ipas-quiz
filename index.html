@@ -2,30 +2,30 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="utf-8">
-    <title>iPAS 模擬考 - 暴力修復版</title>
+    <title>iPAS 模擬考 - 究極修復版</title>
     <style>
         :root { --bg:#0f172a; --card:#1e293b; --brand:#2dd4bf; --text:#f1f5f9; }
-        body { background:var(--bg); color:var(--text); font-family: sans-serif; padding:20px; }
+        body { background:var(--bg); color:var(--text); font-family: sans-serif; margin:0; padding:20px; line-height:1.6; }
         .wrap { max-width:800px; margin:0 auto; }
         .card { background:var(--card); padding:20px; border-radius:12px; border:1px solid #334155; margin-bottom:15px; }
-        .btn { background:#334155; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold; }
-        .btn-active { background:var(--brand) !important; color:#0f172a !important; }
+        .btn { background:#334155; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold; margin-right:8px; }
         .opt { width:100%; text-align:left; padding:15px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:10px; cursor:pointer; }
         .opt.selected { border-color:var(--brand); background:rgba(45,212,191,0.1); }
         .opt.correct { background:rgba(34,197,94,0.2); border-color:#22c55e; }
         .opt.wrong { background:rgba(251,113,133,0.2); border-color:#fb7185; }
-        .nav-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(35px, 1fr)); gap:5px; margin-top:10px; }
-        .dot { background:#0f172a; border:1px solid #334155; text-align:center; padding:5px 0; border-radius:5px; cursor:pointer; font-size:12px; }
-        .dot.active { border-color:var(--brand); color:var(--brand); }
+        .nav-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap:8px; margin-top:10px; }
+        .dot { background:#0f172a; border:1px solid #334155; text-align:center; padding:8px 0; border-radius:5px; cursor:pointer; font-size:12px; color:#94a3b8; }
+        .dot.active { border-color:var(--brand); color:var(--brand); font-weight:bold; }
+        .dot.done { background:#334155; color:#fff; }
     </style>
 </head>
 <body>
 <div class="wrap">
     <div class="card">
         <h2 style="color:var(--brand); margin-top:0;">iPAS 模擬考系統</h2>
-        <button class="btn" id="btnAi" onclick="fetchAndFix('ipas_questions_ai.json')">AI 規劃師</button>
-        <button class="btn" id="btnAll" onclick="fetchAndFix('ipas_questions_all.json')">全部題庫</button>
-        <div id="status" style="margin-top:10px; font-size:13px; color:#94a3b8;">等待載入...</div>
+        <button class="btn" onclick="loadAndRepair('ipas_questions_ai.json')">載入 AI 規劃師</button>
+        <button class="btn" onclick="loadAndRepair('ipas_questions_all.json')">載入全部題庫</button>
+        <div id="status" style="margin-top:10px; font-size:14px; color:#94a3b8;">請點擊按鈕載入 JSON 檔案</div>
     </div>
     <div id="quizBox" style="display:none;">
         <div class="card">
@@ -35,81 +35,89 @@
                 <button class="btn" onclick="revealed[current]=true;render()">看解析</button>
                 <button class="btn" onclick="move(1)">下一題</button>
             </div>
-            <button class="btn" onclick="if(confirm('交卷？')) {isDone=true;render()}" style="width:100%; margin-top:10px; background:var(--brand); color:#000;">交卷</button>
         </div>
         <div class="card"><div id="navGrid" class="nav-grid"></div></div>
     </div>
 </div>
 
 <script>
-let bank = [], current = 0, answers = {}, revealed = {}, isDone = false;
+let bank = [], current = 0, answers = {}, revealed = {};
 
-async function fetchAndFix(fileName) {
-    const status = document.getElementById('status');
-    status.textContent = "正在強制解析檔案...";
-    
+async function loadAndRepair(name) {
+    document.getElementById('status').textContent = "正在強力修復並讀取中...";
     try {
-        const res = await fetch(fileName + "?v=" + Date.now());
-        const raw = await res.text();
+        const res = await fetch(name + "?v=" + Date.now());
+        const text = await res.text();
         
-        // 【核心邏輯】不使用 JSON.parse，改用正則表達式強行切割
-        // 這個正則會尋找每一組 { "id": ... "analysis": ... }
-        const blocks = raw.match(/\{[\s\S]*?\}\s*(?=[,\]]|\s*\{|$)/g);
-        
+        // 使用「非標準 JSON」切割法，專治格式錯誤
+        const rawBlocks = text.split(/\{\s*"id"/); 
         let temp = [];
-        const letterMap = {"A":0, "B":1, "C":2, "D":3};
 
-        blocks.forEach(b => {
-            try {
-                // 嘗試針對單個塊進行修復與解析
-                let s = b.trim().replace(/,$/, "");
-                if(!s.endsWith("}")) s += "}";
-                const item = JSON.parse(s);
-                
-                let p = { q: "", opts: [], ans: 0, exp: "" };
-                if (item.question) { // AI 版
-                    p.q = item.question;
-                    p.opts = [item.options.A, item.options.B, item.options.C, item.options.D];
-                    p.ans = letterMap[item.answer];
-                    p.exp = item.analysis;
-                } else if (item.q) { // ALL 版
-                    p.q = item.q;
-                    p.opts = item.a;
-                    p.ans = parseInt(item.c) - 1;
-                    p.exp = item.e;
-                }
-                if (p.q) temp.push(p);
-            } catch (e) {
-                // 如果這題真的壞到不能解析，就跳過這題，不影響其他題
-                console.error("跳過一題損壞的題目");
+        rawBlocks.forEach(block => {
+            const getVal = (key) => {
+                const reg = new RegExp(`"${key}"\\s*:\\s*"([\\s\\S]*?)"(?=[\\s\\n]*,|[\\s\\n]*\\})`);
+                const m = block.match(reg);
+                return m ? m[1].replace(/\\"/g, '"') : "";
+            };
+
+            let q = getVal("question") || getVal("q");
+            if (!q) return;
+
+            let ans = getVal("answer");
+            let cVal = "";
+            if (!ans) {
+                const cMatch = block.match(/"c"\s*:\s*(\d)/);
+                cVal = cMatch ? cMatch[1] : "";
+            }
+
+            let exp = getVal("analysis") || getVal("e");
+            let opts = [];
+            
+            // 抓取選項
+            ["A","B","C","D"].forEach(l => {
+                let o = getVal(l);
+                if (o) opts.push(o);
+            });
+            if (opts.length === 0) {
+                const aMatch = block.match(/"a"\s*:\s*\[([\s\S]*?)\]/);
+                if (aMatch) opts = aMatch[1].split('",').map(s => s.replace(/[\[\]" \n]/g, ''));
+            }
+
+            if (q && opts.length >= 2) {
+                const lMap = {"A":0, "B":1, "C":2, "D":3};
+                temp.push({
+                    q: q,
+                    opts: opts,
+                    ans: ans ? lMap[ans] : (parseInt(cVal)-1),
+                    exp: exp
+                });
             }
         });
 
         bank = temp.sort(() => Math.random() - 0.5).slice(0, 50);
-        current = 0; answers = {}; revealed = {}; isDone = false;
-        document.getElementById('quizBox').style.display = 'block';
-        status.textContent = "✅ 成功載入！已過濾掉損壞題目。";
+        current = 0; answers = {}; revealed = {};
+        document.getElementById('quizBox').style.display = "block";
+        document.getElementById('status').textContent = "✅ 讀取成功！已修正損壞區塊，共 " + temp.length + " 題。";
         render();
-    } catch (err) {
-        status.textContent = "❌ 無法讀取檔案: " + err.message;
+    } catch (e) {
+        document.getElementById('status').textContent = "❌ 錯誤: " + e.message;
     }
 }
 
 function render() {
     const item = bank[current];
-    const show = isDone || revealed[current];
-    let html = `<h3>${current + 1}. ${item.q}</h3>`;
+    let html = `<h3>Q${current+1}: ${item.q}</h3>`;
     item.opts.forEach((opt, i) => {
         let cls = "opt" + (answers[current] === i ? " selected" : "");
-        if (show) cls += (i === item.ans ? " correct" : (answers[current] === i ? " wrong" : ""));
-        html += `<button class="${cls}" onclick="if(!isDone){answers[current]=i;render()}">${opt}</button>`;
+        if (revealed[current]) cls += (i === item.ans ? " correct" : (answers[current] === i ? " wrong" : ""));
+        html += `<button class="${cls}" onclick="if(!revealed[current]){answers[current]=i;render()}">${opt}</button>`;
     });
-    if (show) html += `<div style="margin-top:15px; padding:15px; background:rgba(255,255,255,0.05); border-left:4px solid var(--brand);">解析：${item.exp || "無"}</div>`;
+    if (revealed[current]) html += `<div style="padding:15px; background:rgba(45,212,191,0.1); border-left:4px solid var(--brand); margin-top:10px;"><b>解析：</b>${item.exp}</div>`;
     document.getElementById('qArea').innerHTML = html;
-    document.getElementById('navGrid').innerHTML = bank.map((_, i) => `<div class="dot ${i===current?'active':''} ${answers[i]!==undefined?'done':''}" onclick="current=${i};render()">${i+1}</div>`).join('');
+    document.getElementById('navGrid').innerHTML = bank.map((_,i) => `<div class="dot ${i===current?'active':''} ${answers[i]!==undefined?'done':''}" onclick="current=${i};render()">${i+1}</div>`).join('');
 }
 
-function move(s) { let n = current + s; if(n>=0 && n<bank.length) { current = n; render(); } }
+function move(s) { let n = current + s; if(n>=0 && n<bank.length) { current=n; render(); } }
 </script>
 </body>
 </html>
