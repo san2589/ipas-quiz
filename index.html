@@ -2,144 +2,69 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="utf-8">
-    <title>iPAS 模擬考 - 強韌修復版</title>
+    <title>JSON 損壞精準定位工具</title>
     <style>
-        :root { --bg:#0f172a; --card:#1e293b; --brand:#2dd4bf; --text:#f1f5f9; }
-        body { background:var(--bg); color:var(--text); font-family: sans-serif; margin:0; padding:20px; }
-        .wrap { max-width:800px; margin:0 auto; }
-        .card { background:var(--card); padding:20px; border-radius:12px; border:1px solid #334155; margin-bottom:15px; }
-        .btn { background:#334155; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold; margin-right:5px; margin-bottom:5px; }
-        .btn-active { background:var(--brand) !important; color:#0f172a !important; }
-        .opt { width:100%; text-align:left; padding:15px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:10px; cursor:pointer; font-size:16px; }
-        .opt.selected { border-color:var(--brand); background:rgba(45,212,191,0.1); }
-        .opt.correct { background:rgba(34,197,94,0.2); border-color:#22c55e; }
-        .opt.wrong { background:rgba(251,113,133,0.2); border-color:#fb7185; }
-        .nav-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(35px, 1fr)); gap:5px; margin-top:10px; }
-        .dot { background:#0f172a; border:1px solid #334155; text-align:center; padding:5px 0; border-radius:5px; cursor:pointer; font-size:12px; color:#94a3b8; }
-        .dot.active { border-color:var(--brand); color:var(--brand); font-weight:bold; }
-        .dot.done { background:#334155; color:#fff; }
-        .exp { margin-top:15px; padding:15px; background:rgba(45,212,191,0.05); border-left:4px solid var(--brand); line-height:1.6; }
+        body { font-family: monospace; background: #1a1a1a; color: #00ff00; padding: 20px; line-height: 1.5; }
+        .error-card { background: #330000; border: 1px solid #ff0000; padding: 15px; margin-bottom: 20px; color: #ff9999; }
+        .success { color: #00ff00; font-size: 1.2rem; }
+        .info { color: #888; margin-bottom: 10px; }
+        b { color: #fff; text-decoration: underline; }
     </style>
 </head>
 <body>
-<div class="wrap">
-    <div class="card">
-        <h2 style="color:var(--brand); margin-top:0;">iPAS 模擬考 (自動跳過錯誤版)</h2>
-        <button class="btn" id="btnAi" onclick="fetchData('ipas_questions_ai.json')">AI 規劃師</button>
-        <button class="btn" id="btnAll" onclick="fetchData('ipas_questions_all.json')">全部題庫</button>
-        <div id="msg" style="margin-top:10px; font-size:13px; color:#94a3b8;">如果 JSON 檔案有損壞，系統會自動跳過該題。</div>
-    </div>
-
-    <div id="quizBox" style="display:none;">
-        <div class="card">
-            <div id="qArea"></div>
-            <div style="display:flex; justify-content:space-between; margin-top:20px;">
-                <button class="btn" onclick="move(-1)">上一題</button>
-                <button class="btn" onclick="showHelp()">看解析</button>
-                <button class="btn" onclick="move(1)">下一題</button>
-            </div>
-            <button class="btn" onclick="finish()" style="width:100%; margin-top:10px; background:var(--brand); color:#000;">送出交卷</button>
-        </div>
-        <div class="card"><div id="navGrid" class="nav-grid"></div></div>
-    </div>
-</div>
+    <h2>🔍 JSON 檔案掃描中...</h2>
+    <div id="output"></div>
 
 <script>
-let bank = [], current = 0, answers = {}, revealed = {}, isDone = false;
-
-async function fetchData(fileName) {
-    const msg = document.getElementById('msg');
-    msg.textContent = "正在掃描檔案並修復損壞區塊...";
-    
-    document.getElementById('btnAi').classList.toggle('btn-active', fileName.includes('ai'));
-    document.getElementById('btnAll').classList.toggle('btn-active', fileName.includes('all'));
-
+async function scanJSON(fileName) {
+    const output = document.getElementById('output');
     try {
         const res = await fetch(fileName + "?t=" + Date.now());
-        if (!res.ok) throw new Error("找不到檔案: " + fileName);
+        if (!res.ok) throw new Error("找不到檔案：" + fileName);
+        const text = await res.text();
+        const lines = text.split('\n');
         
-        // 【關鍵】不使用 res.json()，改用 text() 以便手動修復
-        const rawText = await res.text();
-        
-        // 使用正則表達式找出所有 { ... } 結構的題目
-        const blocks = rawText.match(/\{[\s\S]*?\}\s*(?=[,\]]|\s*\{|$)/g);
-        if (!blocks) throw new Error("檔案解析失敗，找不到題目內容。");
+        output.innerHTML += `<div class="info">檔案讀取成功，共 $\{lines.length\} 行。開始逐行檢測...</div>`;
 
-        let temp = [];
-        const letterMap = {"A":0, "B":1, "C":2, "D":3};
+        // 嘗試整體解析，如果失敗才進入逐行檢查
+        try {
+            JSON.parse(text);
+            output.innerHTML += `<div class="success">🎉 恭喜！檔案結構完全正確，沒有語法錯誤。</div>`;
+        } catch (e) {
+            const errorMsg = e.message;
+            // 找出錯誤發生的位置（例如：at position 258926）
+            const posMatch = errorMsg.match(/position (\d+)/);
+            
+            if (posMatch) {
+                const pos = parseInt(posMatch[1]);
+                const errorChar = text.substring(pos - 50, pos + 50);
+                const lineNum = text.substring(0, pos).split('\n').length;
 
-        blocks.forEach((b, index) => {
-            try {
-                // 清理多餘逗號並嘗試解析單個題目
-                let jsonStr = b.trim();
-                if (jsonStr.endsWith(',')) jsonStr = jsonStr.slice(0, -1);
-                
-                const item = JSON.parse(jsonStr);
-                let parsed = { q: "", opts: [], ans: 0, exp: "" };
-
-                // 辨識 AI 格式
-                if (item.options && item.question) {
-                    parsed.q = item.question;
-                    parsed.opts = [item.options.A, item.options.B, item.options.C, item.options.D];
-                    parsed.ans = letterMap[item.answer] ?? 0;
-                    parsed.exp = item.analysis || "";
-                } 
-                // 辨識 ALL 格式
-                else if (item.a && item.q) {
-                    parsed.q = item.q;
-                    parsed.opts = item.a;
-                    parsed.ans = (parseInt(item.c) - 1) || 0;
-                    parsed.exp = item.e || "";
-                }
-
-                if (parsed.q && parsed.opts.length >= 2) {
-                    temp.push(parsed);
-                }
-            } catch (e) {
-                console.warn("跳過損壞的題目區塊:", index);
+                let html = `<div class="error-card">`;
+                html += `<h3>❌ 發現錯誤！</h3>`;
+                html += `<p><b>錯誤訊息：</b>$\{errorMsg\}</p>`;
+                html += `<p><b>概略行號：</b>約第 $\{lineNum\} 行</p>`;
+                html += `<p><b>錯誤附近文字：</b><br><pre>...$\{escapeHTML(errorChar)\}...</pre></p>`;
+                html += `<p style="color:#fff">💡 提示：請檢查第 $\{lineNum\} 行結尾是否漏了逗號 <b>,</b> 或者括號 <b>}</b> 是否沒寫對。</p>`;
+                html += `</div>`;
+                output.innerHTML += html;
+            } else {
+                output.innerHTML += `<div class="error-card">無法自動定位位置，錯誤訊息：$\{errorMsg\}</div>`;
             }
-        });
-
-        if (temp.length === 0) throw new Error("沒有成功解析任何題目，請檢查檔案編碼。");
-
-        bank = temp.sort(() => Math.random() - 0.5).slice(0, 50);
-        current = 0; answers = {}; revealed = {}; isDone = false;
-        document.getElementById('quizBox').style.display = 'block';
-        msg.textContent = "✅ 已從 " + temp.length + " 題中修復並抽取 50 題。";
-        render();
-    } catch (e) {
-        msg.innerHTML = "<span style='color:#fb7185'>❌ 錯誤: " + e.message + "</span>";
+        }
+    } catch (err) {
+        output.innerHTML += `<div style="color:red">讀取失敗：$\{err.message\}</div>`;
     }
 }
 
-function render() {
-    const item = bank[current];
-    const show = isDone || revealed[current];
-    let html = `<h3 style="line-height:1.5">${current + 1}. ${item.q}</h3>`;
-    
-    item.opts.forEach((opt, i) => {
-        let cls = "opt";
-        if (answers[current] === i) cls += " selected";
-        if (show) {
-            if (i === item.ans) cls += " correct";
-            else if (answers[current] === i) cls += " wrong";
-        }
-        html += `<button class="${cls}" onclick="pick(${i})">${opt}</button>`;
+function escapeHTML(str) {
+    return str.replace(/[&<>"']/g, function(m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
     });
-
-    if (show) html += `<div class="exp"><b>💡 解析：</b><br>${item.exp || "此題無解析"}</div>`;
-    document.getElementById('qArea').innerHTML = html;
-
-    document.getElementById('navGrid').innerHTML = bank.map((_, i) => {
-        let cls = "dot" + (i === current ? " active" : (answers[i] !== undefined ? " done" : ""));
-        return `<div class="${cls}" onclick="current=${i};render()">${i+1}</div>`;
-    }).join('');
 }
 
-function pick(i) { if(!isDone) { answers[current] = i; render(); } }
-function move(s) { let n = current + s; if(n>=0 && n<bank.length) { current = n; render(); } }
-function showHelp() { revealed[current] = true; render(); }
-function finish() { if(confirm("確定交卷？")) { isDone = true; render(); } }
+// 執行檢測（您可以改名測試不同的檔案）
+scanJSON('ipas_questions_ai.json');
 </script>
 </body>
 </html>
