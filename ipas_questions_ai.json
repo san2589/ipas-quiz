@@ -801,7 +801,6 @@
       "D": "USB Hub"
     },
     "answer": "B",
-    "answer": "B",
     "analysis": "GPU 具備數千個核心，非常適合處理神經網路所需的高度並行運算。"
   },
   {
