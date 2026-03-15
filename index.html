@@ -3,180 +3,133 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>iPAS AI 模擬考 (格式全相容版)</title>
+  <title>iPAS 模擬考 - 終極相容版</title>
   <style>
-    :root { --bg:#0b1220; --card:#121a2a; --muted:#94a3b8; --text:#e5e7eb; --brand:#14b8a6; --danger:#ef4444; --ok:#22c55e; }
-    *{ box-sizing:border-box; }
-    body{ margin:0; font-family: sans-serif; background:#0b1220; color:var(--text); min-height: 100vh; }
-    .wrap{ max-width:1100px; margin:0 auto; padding:16px; }
-    .topbar{ display:flex; align-items:center; justify-content:space-between; padding:15px 0; border-bottom:1px solid rgba(148,163,184,0.1); margin-bottom:15px; }
-    .card{ background:var(--card); border:1px solid rgba(148,163,184,0.15); border-radius:16px; padding:20px; margin-bottom:12px; }
-    .row{ display:flex; gap:10px; flex-wrap:wrap; }
-    .grid{ display:grid; grid-template-columns: 1fr; gap:15px; }
-    @media (min-width: 920px){ .grid{ grid-template-columns: 1.5fr 0.5fr; } }
-    .btn{ border:0; border-radius:10px; padding:10px 18px; cursor:pointer; background:rgba(20,184,166,0.1); color:#c7fff6; border:1px solid rgba(20,184,166,0.4); font-weight:bold; }
-    .btn:hover{ background:var(--brand); color:white; }
-    .btn-active{ background:var(--brand) !important; color:white !important; }
-    .progress{ height:8px; background:rgba(148,163,184,0.1); border-radius:99px; overflow:hidden; margin:15px 0; }
-    .bar{ height:100%; width:0%; background:var(--brand); transition:0.4s; }
-    .opt{ width:100%; text-align:left; padding:15px; border-radius:12px; border:1px solid rgba(148,163,184,0.2); background:rgba(2,6,23,0.3); color:var(--text); cursor:pointer; margin-bottom:12px; }
-    .opt.selected{ border-color:var(--brand); background:rgba(20,184,166,0.1); outline: 2px solid var(--brand); }
-    .opt.correct{ border-color:var(--ok); background:rgba(34,197,94,0.2); }
-    .opt.wrong{ border-color:var(--danger); background:rgba(239,68,68,0.2); }
-    .miniGrid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap:6px; }
-    .qdot{ border-radius:8px; padding:8px 0; text-align:center; font-size:12px; border:1px solid rgba(148,163,184,0.2); cursor:pointer; }
-    .qdot.active{ background:var(--brand); color:white; }
-    .qdot.ok{ border-color:var(--brand); color:var(--brand); }
-    .exp-box { margin-top:20px; padding:15px; background:rgba(20,184,166,0.1); border-radius:10px; border-left:5px solid var(--brand); }
+    :root { --bg:#0b1220; --card:#121a2a; --brand:#14b8a6; --danger:#ef4444; --ok:#22c55e; --text:#e5e7eb; }
+    body { background:var(--bg); color:var(--text); font-family:sans-serif; margin:0; padding:15px; }
+    .wrap { max-width:1000px; margin:0 auto; }
+    .card { background:var(--card); border:1px solid rgba(148,163,184,0.2); border-radius:12px; padding:20px; margin-bottom:15px; }
+    .btn { background:rgba(20,184,166,0.15); border:1px solid var(--brand); color:#c7fff6; padding:10px 15px; border-radius:8px; cursor:pointer; font-weight:bold; }
+    .btn:hover { background:var(--brand); color:#000; }
+    .opt { width:100%; text-align:left; padding:12px; border:1px solid #444; background:rgba(0,0,0,0.2); color:#fff; border-radius:8px; margin-bottom:10px; cursor:pointer; }
+    .opt.selected { border-color:var(--brand); background:rgba(20,184,166,0.1); }
+    .opt.correct { background:rgba(34,197,94,0.2); border-color:var(--ok); }
+    .opt.wrong { background:rgba(239,68,68,0.2); border-color:var(--danger); }
+    .miniGrid { display:grid; grid-template-columns: repeat(auto-fill, minmax(35px, 1fr)); gap:5px; margin-top:10px; }
+    .qdot { border:1px solid #444; text-align:center; padding:5px 0; border-radius:5px; font-size:12px; cursor:pointer; }
+    .qdot.ok { border-color:var(--brand); background:rgba(20,184,166,0.1); }
+    .qdot.active { background:var(--brand); color:#000; }
+    .exp { margin-top:15px; padding:12px; background:rgba(255,255,255,0.05); border-left:4px solid var(--brand); font-size:0.9rem; }
+    #fileInput { display: none; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="topbar">
-      <div style="font-weight:900; font-size:1.4rem; color:var(--brand);">iPAS AI 模擬考系統</div>
-      <div id="timerDisplay" style="font-family:monospace; background:#000; padding:5px 12px; border-radius:8px; color:var(--brand); border:1px solid var(--brand);">--:--</div>
+<div class="wrap">
+  <div class="card">
+    <h2 style="margin-top:0; color:var(--brand);">iPAS 題庫載入器</h2>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn" onclick="document.getElementById('fileInput').click()">📁 點我選擇題庫 JSON 檔</button>
+      <input type="file" id="fileInput" accept=".json,.txt" onchange="handleFile(this.files[0])">
+      <div id="loadStatus" style="line-height:40px; font-size:14px; color:#aaa;">尚未載入檔案</div>
     </div>
-    
-    <div class="grid">
-      <div class="card">
-        <div class="row" style="justify-content:space-between; margin-bottom:20px;">
-          <div class="row">
-            <button class="btn" id="btnAll" onclick="switchLib('./ipas_questions_all.json')">全部題庫 (q/a/c 格式)</button>
-            <button class="btn" id="btnAi" onclick="switchLib('./ipas_questions_ai.json')">AI 規劃師 (options/answer 格式)</button>
-          </div>
-          <button class="btn" style="border-color:var(--danger); color:var(--danger);" onclick="resetAll()">重置進度</button>
-        </div>
-        <div class="progress"><div class="bar" id="bar"></div></div>
-        <div id="quizArea"></div>
-        <div class="row" style="margin-top:25px; justify-content:space-between;">
-          <button class="btn" onclick="move(-1)">上一題</button>
-          <div class="row">
-            <button class="btn" id="btnReveal" onclick="reveal()">看答案</button>
-            <button class="btn" id="btnSubmit" onclick="submitExam()" style="background:var(--ok); color:#000;">送出交卷</button>
-            <button class="btn" onclick="move(1)">下一題</button>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div id="navGrid" class="miniGrid"></div>
-        <div id="resultBox" style="display:none; margin-top:20px; text-align:center;">
-            <div id="finalScore" style="font-size:24px; font-weight:bold;"></div>
-        </div>
-      </div>
-    </div>
+    <p style="font-size:12px; color:#888;">* 支援 ipas_questions_ai.json 或 ipas_questions_all.json 格式</p>
   </div>
 
+  <div id="quizContainer" style="display:none;">
+    <div class="card">
+        <div id="barWrap" style="height:5px; background:#333; margin-bottom:15px;"><div id="bar" style="height:100%; background:var(--brand); width:0%;"></div></div>
+        <div id="quizArea"></div>
+        <div style="display:flex; justify-content:space-between; margin-top:20px;">
+            <button class="btn" onclick="move(-1)">上一題</button>
+            <div>
+                <button class="btn" id="btnReveal" onclick="reveal()">看答案</button>
+                <button class="btn" onclick="submit()" style="background:var(--ok); color:#000; border:none;">交卷</button>
+            </div>
+            <button class="btn" onclick="move(1)">下一題</button>
+        </div>
+    </div>
+    <div class="card">
+        <div style="margin-bottom:10px; font-weight:bold;">題號導航</div>
+        <div id="navGrid" class="miniGrid"></div>
+    </div>
+  </div>
+</div>
+
 <script>
-(() => {
-    let libUrl = localStorage.getItem("ipas_active_url") || "./ipas_questions_ai.json";
-    const LS_STATE = "state_" + libUrl;
-    const LS_DATA = "data_" + libUrl;
+let bank = [], currentIdx = 0, answers = {}, revealed = {}, submitted = false;
 
-    let bank = [], currentIdx = 0, answers = {}, revealed = {}, submitted = false;
-    let timeLeft = parseInt(localStorage.getItem("exam_timer")) || 3600;
-
-    window.switchLib = (url) => { localStorage.setItem("ipas_active_url", url); location.reload(); };
-    window.resetAll = () => { if(confirm("確定重置？")) { localStorage.clear(); location.reload(); } };
-
-    async function init() {
-        document.getElementById("btnAi").classList.toggle("btn-active", libUrl.includes("ai"));
-        document.getElementById("btnAll").classList.toggle("btn-active", libUrl.includes("all"));
-
+function handleFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
         try {
-            const cached = localStorage.getItem(LS_DATA);
-            if (cached) {
-                bank = JSON.parse(cached);
-            } else {
-                const res = await fetch(libUrl + "?t=" + Date.now());
-                const text = await res.text();
-                const matches = text.match(/\{[\s\S]*?\}/g);
-                
-                const ansMap = {"A":0,"B":1,"C":2,"D":3};
-                let full = [];
+            const text = e.target.result;
+            // 使用正則表達式解析，解決 JSON 格式微小錯誤
+            const matches = text.match(/\{[\s\S]*?\}/g);
+            if (!matches) throw new Error("檔案中找不到題目內容");
 
-                matches.forEach(m => {
-                    try {
-                        let clean = m.trim().replace(/,$/, "");
-                        if(!clean.endsWith("}")) clean += "}";
-                        const q = JSON.parse(clean);
-                        
-                        // --- 格式自動辨識核心 ---
-                        let title = q.question || q.q;
-                        let opts = [];
-                        let correctIdx = 0;
-                        let analysis = q.analysis || q.e || "";
+            let tempBank = [];
+            const ansMap = {"A":0, "B":1, "C":2, "D":3};
 
-                        // 如果是 ipas_questions_ai.json (options 是物件)
-                        if (q.options && !Array.isArray(q.options)) {
-                            opts = [q.options.A, q.options.B, q.options.C, q.options.D];
-                            correctIdx = ansMap[q.answer];
-                        } 
-                        // 如果是 ipas_questions_all.json (a 是陣列, c 是索引)
-                        else if (q.a && Array.isArray(q.a)) {
-                            opts = q.a;
-                            correctIdx = parseInt(q.c) - 1; // 把 1,2,3,4 轉成 0,1,2,3
-                        }
+            matches.forEach(m => {
+                try {
+                    let clean = m.trim().replace(/,$/, "");
+                    if(!clean.endsWith("}")) clean += "}";
+                    const q = JSON.parse(clean);
+                    
+                    // 相容兩種格式
+                    let title = q.question || q.q;
+                    let opts = (q.options && !Array.isArray(q.options)) ? [q.options.A, q.options.B, q.options.C, q.options.D] : q.a;
+                    let ans = (q.answer !== undefined) ? ansMap[q.answer] : (parseInt(q.c) - 1);
+                    let exp = q.analysis || q.e || "無解析";
 
-                        if(title && opts.length > 0) {
-                            full.push({ id: q.id || "N/A", title, opts, ans: correctIdx, exp: analysis });
-                        }
-                    } catch(e) {}
-                });
+                    if (title && opts) {
+                        tempBank.push({ title, opts, ans, exp });
+                    }
+                } catch(err) {}
+            });
 
-                full.sort(() => Math.random() - 0.5);
-                bank = full.slice(0, 50);
-                localStorage.setItem(LS_DATA, JSON.stringify(bank));
-            }
-
-            const saved = JSON.parse(localStorage.getItem(LS_STATE) || "{}");
-            answers = saved.ans || {};
-            currentIdx = saved.idx || 0;
-            submitted = saved.sub || false;
+            if (tempBank.length === 0) throw new Error("解析失敗，請確認檔案格式");
+            
+            bank = tempBank.sort(() => Math.random() - 0.5).slice(0, 50);
+            document.getElementById("loadStatus").textContent = "✅ 成功載入 " + bank.length + " 題！";
+            document.getElementById("quizContainer").style.display = "block";
+            currentIdx = 0; answers = {}; revealed = {}; submitted = false;
             render();
-            if(!submitted) setInterval(() => { timeLeft--; localStorage.setItem("exam_timer", timeLeft); updateTimerUI(); }, 1000);
-        } catch(e) {
-            document.getElementById("quizArea").innerHTML = "載入失敗，請確認檔案路徑。";
+        } catch(err) {
+            alert("錯誤: " + err.message);
         }
-    }
+    };
+    reader.readAsText(file);
+}
 
-    function updateTimerUI() {
-        const m = Math.floor(timeLeft/60), s = timeLeft%60;
-        document.getElementById("timerDisplay").textContent = `${m}:${s<10?'0':''}${s}`;
-    }
+function render() {
+    const q = bank[currentIdx];
+    const isShow = submitted || revealed[currentIdx];
+    let html = `<h3>Q${currentIdx + 1}: ${q.title}</h3>`;
+    q.opts.forEach((opt, i) => {
+        let cls = "opt";
+        if (answers[currentIdx] === i) cls += " selected";
+        if (isShow) cls += (i === q.ans ? " correct" : (answers[currentIdx] === i ? " wrong" : ""));
+        html += `<button class="${cls}" onclick="choose(${i})">${opt}</button>`;
+    });
+    if (isShow) html += `<div class="exp">💡 解析：${q.exp}</div>`;
+    document.getElementById("quizArea").innerHTML = html;
+    document.getElementById("bar").style.width = ((currentIdx + 1) / bank.length * 100) + "%";
+    renderNav();
+}
 
-    function render() {
-        const q = bank[currentIdx]; if(!q) return;
-        const isShow = submitted || revealed[currentIdx];
-        let html = `<div style="font-size:1.1rem; font-weight:bold; margin-bottom:20px;">${currentIdx+1}. ${q.title}</div>`;
-        q.opts.forEach((opt, i) => {
-            let cls = "opt";
-            if(answers[currentIdx] === i) cls += " selected";
-            if(isShow) cls += (i === q.ans ? " correct" : (answers[currentIdx]===i?" wrong":""));
-            html += `<button class="${cls}" onclick="choose(${i})">${opt}</button>`;
-        });
-        if(isShow && q.exp) html += `<div class="exp-box">解析：${q.exp}</div>`;
-        document.getElementById("quizArea").innerHTML = html;
-        document.getElementById("bar").style.width = ((currentIdx+1)/bank.length*100) + "%";
-        renderNav();
-    }
+function renderNav() {
+    document.getElementById("navGrid").innerHTML = bank.map((_, i) => {
+        let cls = "qdot" + (i === currentIdx ? " active" : (answers[i] !== undefined ? " ok" : ""));
+        return `<div class="${cls}" onclick="currentIdx=${i};render()">${i+1}</div>`;
+    }).join('');
+}
 
-    function renderNav() {
-        document.getElementById("navGrid").innerHTML = bank.map((q, i) => {
-            let cls = "qdot";
-            if(i === currentIdx) cls += " active";
-            if(answers[i] !== undefined) cls += " ok";
-            return `<div class="${cls}" onclick="currentIdx=${i};render()">${i+1}</div>`;
-        }).join('');
-    }
-
-    window.choose = (i) => { if(!submitted) { answers[currentIdx] = i; save(); render(); } };
-    window.move = (s) => { let n = currentIdx + s; if(n>=0 && n<bank.length) { currentIdx = n; render(); save(); } };
-    window.reveal = () => { revealed[currentIdx] = true; render(); };
-    window.submitExam = () => { if(confirm("確定交卷？")) { submitted = true; save(); render(); document.getElementById("resultBox").style.display="block"; } };
-    function save() { localStorage.setItem(LS_STATE, JSON.stringify({ans: answers, idx: currentIdx, sub: submitted})); }
-    
-    init();
-})();
+function choose(i) { if(!submitted) { answers[currentIdx] = i; render(); } }
+function move(step) { let next = currentIdx + step; if(next >= 0 && next < bank.length) { currentIdx = next; render(); } }
+function reveal() { revealed[currentIdx] = true; render(); }
+function submit() { if(confirm("確定交卷看分數？")) { submitted = true; render(); } }
 </script>
 </body>
 </html>
