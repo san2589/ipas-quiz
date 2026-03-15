@@ -56,7 +56,7 @@
       <div class="card">
         <div class="row" style="justify-content:space-between; margin-bottom:20px;">
           <div class="row">
-            <button class="btn2 btn" id="libAll" onclick="switchLib('./ipas_questions_all.json')">全部題庫</button>
+            <button class="btn2 btn" id="libAll" onclick="switchLib('./1.txt')">1.txt (題庫)</button>
             <button class="btn2 btn" id="libAi" onclick="switchLib('./ipas_questions_ai.json')">AI 規劃師</button>
           </div>
           <button class="btnDanger btn" onclick="clearProgress()">重新抽題 (重置)</button>
@@ -94,13 +94,14 @@
 
 <script>
 (() => {
-    let libUrl = localStorage.getItem("ipas_active_url") || "./ipas_questions_ai.json";
+    // 預設抓取 1.txt，因為這是你目前的題庫名稱
+    let libUrl = localStorage.getItem("ipas_active_url") || "./1.txt";
     const LS_STATE_KEY = "ipas_save_" + libUrl;
-    const LS_QUESTIONS_KEY = "ipas_questions_data_" + libUrl; // 儲存隨機抽出的 50 題
+    const LS_QUESTIONS_KEY = "ipas_questions_data_" + libUrl;
 
     let bank = [], currentIdx = 0, answers = {}, revealed = {}, submitted = false;
-    let mode = localStorage.getItem("quiz_mode") || "exam"; // 預設考試模式
-    let timeLeft = parseInt(localStorage.getItem("exam_time")) || 3600; // 模擬考 60 分鐘
+    let mode = localStorage.getItem("quiz_mode") || "exam";
+    let timeLeft = parseInt(localStorage.getItem("exam_time")) || 3600;
     let timerInterval = null;
 
     window.switchLib = (url) => { localStorage.setItem("ipas_active_url", url); localStorage.removeItem(LS_QUESTIONS_KEY); location.reload(); };
@@ -121,7 +122,6 @@
         location.reload();
     };
 
-    // 洗牌函數
     function shuffle(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -131,7 +131,12 @@
     }
 
     async function init() {
-        document.getElementById(libUrl.includes("ai")?"libAi":"libAll").classList.add("btn-active");
+        // UI 狀態設定
+        const btnLib1 = document.getElementById("libAll");
+        const btnLib2 = document.getElementById("libAi");
+        if(libUrl.includes("1.txt")) btnLib1.classList.add("btn-active");
+        else btnLib2.classList.add("btn-active");
+
         document.getElementById(mode==="exam"?"modeBtnExam":"modeBtnPractice").classList.add("btn-active");
         document.getElementById("modeStatus").textContent = mode === "exam" ? "考試模式" : "練習模式";
         
@@ -141,24 +146,30 @@
                 bank = JSON.parse(cachedBank);
             } else {
                 const res = await fetch(libUrl + "?v=" + Date.now());
+                if (!res.ok) throw new Error("找不到檔案");
                 const data = await res.json();
                 
-                // 1. 先處理原始資料格式
-                let fullBank = data.map((q,i)=>({ 
-                    id:q.id||(i+1), 
-                    title:q.q||q.question, 
-                    opts:q.a||q.options, 
-                    ans:(typeof q.c==='number'?q.c-1:q.c),
-                    exp:q.e || ""
-                }));
+                // 1. 修正欄位映射 (針對 1.txt 格式)
+                const ansMap = { "A": 0, "B": 1, "C": 2, "D": 3 };
+                let fullBank = data.map((q, i) => {
+                    // 將 options 物件轉為陣列
+                    let optsArray = [];
+                    if (q.options) {
+                        optsArray = [q.options.A, q.options.B, q.options.C, q.options.D];
+                    }
+                    return {
+                        id: q.id || (i + 1),
+                        title: q.question || "無題目內容",
+                        opts: optsArray,
+                        ans: ansMap[q.answer] !== undefined ? ansMap[q.answer] : q.answer,
+                        exp: q.analysis || ""
+                    };
+                });
 
-                // 2. 全部隨機打亂
+                // 2. 隨機抽取 50 題
                 fullBank = shuffle(fullBank);
-
-                // 3. 抽取前 50 題 (如果題庫不足 50 則取全部)
                 bank = fullBank.slice(0, 50);
 
-                // 4. 存入快取，保證測驗期間題目順序不變
                 localStorage.setItem(LS_QUESTIONS_KEY, JSON.stringify(bank));
             }
             
@@ -174,7 +185,8 @@
             }
             render();
         } catch(e) { 
-            document.getElementById("quizArea").innerHTML = "題庫載入失敗，或 JSON 格式有誤。"; 
+            console.error(e);
+            document.getElementById("quizArea").innerHTML = `<div class="card" style="border-color:var(--danger)">題庫載入失敗！<br>原因：${e.message}<br><br>請檢查：<br>1. 檔案名稱是否為 1.txt<br>2. ID 67 是否有重複欄位<br>3. 是否透過伺服器 (Live Server) 開啟</div>`; 
         }
     }
 
@@ -195,7 +207,7 @@
         const isRev = (mode === "practice" && revealed[currentIdx]) || submitted;
         document.getElementById("btnReveal").disabled = (mode === "exam" && !submitted);
 
-        let html = `<div style="font-size:1.25rem; font-weight:900; margin-bottom:20px; line-height:1.4;">${currentIdx+1}. <span class="kbd">題號ID:${q.id}</span> ${q.title}</div>`;
+        let html = `<div style="font-size:1.25rem; font-weight:900; margin-bottom:20px; line-height:1.4;">${currentIdx+1}. <span class="kbd">ID:${q.id}</span> ${q.title}</div>`;
         
         q.opts.forEach((opt, i) => {
             let cls = "opt";
