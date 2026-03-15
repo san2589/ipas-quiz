@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0f766e" />
-  <title>iPAS AI 模擬考 (隨機 50 題)</title>
+  <title>iPAS AI 模擬考 (強健修復版)</title>
   <style>
     :root { --bg:#0b1220; --card:#121a2a; --muted:#94a3b8; --text:#e5e7eb; --brand:#14b8a6; --danger:#ef4444; --ok:#22c55e; }
     *{ box-sizing:border-box; }
@@ -56,7 +56,6 @@
       <div class="card">
         <div class="row" style="justify-content:space-between; margin-bottom:20px;">
           <div class="row">
-            <button class="btn2 btn" id="libAll" onclick="switchLib('./1.txt')">1.txt (題庫)</button>
             <button class="btn2 btn" id="libAi" onclick="switchLib('./ipas_questions_ai.json')">AI 規劃師</button>
           </div>
           <button class="btnDanger btn" onclick="clearProgress()">重新抽題 (重置)</button>
@@ -94,8 +93,7 @@
 
 <script>
 (() => {
-    // 預設抓取 1.txt，因為這是你目前的題庫名稱
-    let libUrl = localStorage.getItem("ipas_active_url") || "./1.txt";
+    let libUrl = localStorage.getItem("ipas_active_url") || "./ipas_questions_ai.json";
     const LS_STATE_KEY = "ipas_save_" + libUrl;
     const LS_QUESTIONS_KEY = "ipas_questions_data_" + libUrl;
 
@@ -105,22 +103,8 @@
     let timerInterval = null;
 
     window.switchLib = (url) => { localStorage.setItem("ipas_active_url", url); localStorage.removeItem(LS_QUESTIONS_KEY); location.reload(); };
-    
-    window.clearProgress = () => { 
-        if(confirm("確定要重置進度並重新隨機抽取 50 題嗎？")){ 
-            localStorage.removeItem(LS_STATE_KEY); 
-            localStorage.removeItem(LS_QUESTIONS_KEY);
-            localStorage.removeItem("exam_time"); 
-            location.reload(); 
-        }
-    };
-
-    window.switchMode = (newMode) => {
-        if(submitted) return alert("已交卷無法切換模式");
-        mode = newMode;
-        localStorage.setItem("quiz_mode", mode);
-        location.reload();
-    };
+    window.clearProgress = () => { if(confirm("確定重置？")){ localStorage.clear(); location.reload(); } };
+    window.switchMode = (m) => { if(submitted)return; mode=m; localStorage.setItem("quiz_mode",m); location.reload(); };
 
     function shuffle(array) {
         for (let i = array.length - 1; i > 0; i--) {
@@ -131,45 +115,40 @@
     }
 
     async function init() {
-        // UI 狀態設定
-        const btnLib1 = document.getElementById("libAll");
-        const btnLib2 = document.getElementById("libAi");
-        if(libUrl.includes("1.txt")) btnLib1.classList.add("btn-active");
-        else btnLib2.classList.add("btn-active");
-
-        document.getElementById(mode==="exam"?"modeBtnExam":"modeBtnPractice").classList.add("btn-active");
-        document.getElementById("modeStatus").textContent = mode === "exam" ? "考試模式" : "練習模式";
+        document.getElementById("modeBtnExam").classList.toggle("btn-active", mode==="exam");
+        document.getElementById("modeBtnPractice").classList.toggle("btn-active", mode==="practice");
+        document.getElementById("modeStatus").textContent = mode==="exam"?"考試模式":"練習模式";
         
         try {
-            const cachedBank = localStorage.getItem(LS_QUESTIONS_KEY);
-            if (cachedBank) {
-                bank = JSON.parse(cachedBank);
+            const cached = localStorage.getItem(LS_QUESTIONS_KEY);
+            if (cached) {
+                bank = JSON.parse(cached);
             } else {
                 const res = await fetch(libUrl + "?v=" + Date.now());
-                if (!res.ok) throw new Error("找不到檔案");
-                const data = await res.json();
+                const text = await res.text();
                 
-                // 1. 修正欄位映射 (針對 1.txt 格式)
-                const ansMap = { "A": 0, "B": 1, "C": 2, "D": 3 };
-                let fullBank = data.map((q, i) => {
-                    // 將 options 物件轉為陣列
-                    let optsArray = [];
-                    if (q.options) {
-                        optsArray = [q.options.A, q.options.B, q.options.C, q.options.D];
-                    }
-                    return {
-                        id: q.id || (i + 1),
-                        title: q.question || "無題目內容",
-                        opts: optsArray,
-                        ans: ansMap[q.answer] !== undefined ? ansMap[q.answer] : q.answer,
-                        exp: q.analysis || ""
-                    };
-                });
+                // --- 超強健解析：利用正則抓取每一個題目物件 ---
+                const matches = text.match(/\{[\s\S]*?"id"[\s\S]*?\}/g);
+                if(!matches) throw new Error("找不到題目數據");
 
-                // 2. 隨機抽取 50 題
-                fullBank = shuffle(fullBank);
-                bank = fullBank.slice(0, 50);
+                const ansMap = {"A":0,"B":1,"C":2,"D":3};
+                let fullBank = matches.map(m => {
+                    try {
+                        // 清洗單個物件的末尾逗號並嘗試解析
+                        let clean = m.trim().replace(/,$/, "");
+                        if(!clean.endsWith("}")) clean += "}";
+                        const q = JSON.parse(clean);
+                        return {
+                            id: q.id,
+                            title: q.question,
+                            opts: [q.options.A, q.options.B, q.options.C, q.options.D],
+                            ans: ansMap[q.answer],
+                            exp: q.analysis
+                        };
+                    } catch(e) { return null; }
+                }).filter(v => v !== null);
 
+                bank = shuffle(fullBank).slice(0, 50);
                 localStorage.setItem(LS_QUESTIONS_KEY, JSON.stringify(bank));
             }
             
@@ -177,38 +156,28 @@
             answers = saved.answers || {};
             currentIdx = saved.currentIdx || 0;
             submitted = saved.submitted || false;
-
             if(mode === "exam" && !submitted) startTimer();
-            if(submitted) { 
-                document.getElementById("btnSubmit").disabled = true; 
-                document.getElementById("resultBox").style.display="block"; 
-            }
+            if(submitted) document.getElementById("resultBox").style.display="block";
             render();
-        } catch(e) { 
-            console.error(e);
-            document.getElementById("quizArea").innerHTML = `<div class="card" style="border-color:var(--danger)">題庫載入失敗！<br>原因：${e.message}<br><br>請檢查：<br>1. 檔案名稱是否為 1.txt<br>2. ID 67 是否有重複欄位<br>3. 是否透過伺服器 (Live Server) 開啟</div>`; 
+        } catch(e) {
+            document.getElementById("quizArea").innerHTML = `<div class="card" style="color:var(--danger)">載入失敗。請檢查檔名 ipas_questions_ai.json 是否正確。</div>`;
         }
     }
 
     function startTimer() {
-        if(timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(() => {
             if(timeLeft <= 0) { clearInterval(timerInterval); submitExam(true); return; }
             timeLeft--;
-            localStorage.setItem("exam_time", timeLeft);
             const m = Math.floor(timeLeft/60), s = timeLeft%60;
             document.getElementById("timerDisplay").textContent = `${m}:${s<10?'0':''}${s}`;
         }, 1000);
     }
 
     function render() {
-        const q = bank[currentIdx];
-        if(!q) return;
+        const q = bank[currentIdx]; if(!q) return;
         const isRev = (mode === "practice" && revealed[currentIdx]) || submitted;
         document.getElementById("btnReveal").disabled = (mode === "exam" && !submitted);
-
-        let html = `<div style="font-size:1.25rem; font-weight:900; margin-bottom:20px; line-height:1.4;">${currentIdx+1}. <span class="kbd">ID:${q.id}</span> ${q.title}</div>`;
-        
+        let html = `<div style="font-size:1.2rem; font-weight:900; margin-bottom:20px;">${currentIdx+1}. <span class="kbd">ID:${q.id}</span> ${q.title}</div>`;
         q.opts.forEach((opt, i) => {
             let cls = "opt";
             if(answers[currentIdx] === i) cls += " selected";
@@ -218,63 +187,41 @@
             }
             html += `<button class="${cls}" onclick="choose(${i})">${opt}</button>`;
         });
-
-        if (isRev && q.exp) {
-            html += `<div class="exp-box"><strong>💡 解題分析：</strong><br><div style="margin-top:8px;">${q.exp}</div></div>`;
-        }
-
+        if (isRev && q.exp) html += `<div class="exp-box"><strong>💡 解析：</strong><br>${q.exp}</div>`;
         document.getElementById("quizArea").innerHTML = html;
-        document.getElementById("bar").style.width = ((currentIdx+1)/bank.length*100) + "%";
         document.getElementById("progressText").textContent = `${currentIdx+1} / ${bank.length}`;
-        
-        renderNav();
-        updateScore();
+        document.getElementById("bar").style.width = ((currentIdx+1)/bank.length*100) + "%";
+        renderNav(); updateScore();
         localStorage.setItem(LS_STATE_KEY, JSON.stringify({ answers, currentIdx, submitted }));
     }
 
     function renderNav() {
-        const nav = document.getElementById("navGrid");
-        nav.innerHTML = bank.map((q, i) => {
+        document.getElementById("navGrid").innerHTML = bank.map((q, i) => {
             let cls = "qdot";
             if(i === currentIdx) cls += " active";
-            if(submitted) {
-                if(answers[i] === q.ans) cls += " right";
-                else if(answers[i] !== undefined) cls += " bad";
-            } else if(answers[i] !== undefined) cls += " ok";
+            if(submitted) cls += (answers[i] === q.ans ? " right" : " bad");
+            else if(answers[i] !== undefined) cls += " ok";
             return `<div class="${cls}" onclick="go(${i})">${i+1}</div>`;
         }).join('');
     }
 
     function updateScore() {
         let correct = bank.filter((q,i) => answers[i] === q.ans).length;
-        let total = bank.length;
-        let score = Math.round((correct / total) * 100);
-        if(submitted) {
-            document.getElementById("finalScore").textContent = `總分：${score} (${correct}/${total})`;
-            document.getElementById("finalScore").style.color = score >= 70 ? "var(--ok)" : "var(--danger)";
-        } else {
-            document.getElementById("scoreDisplay").textContent = `已作答：${Object.keys(answers).length} / ${total} 題`;
-        }
+        if(submitted) document.getElementById("finalScore").textContent = `總分：${Math.round(correct/bank.length*100)} (${correct}/${bank.length})`;
+        else document.getElementById("scoreDisplay").textContent = `已答：${Object.keys(answers).length} / ${bank.length}`;
     }
 
     window.choose = (i) => { if(!submitted) { answers[currentIdx] = i; render(); } };
     window.go = (i) => { currentIdx = i; render(); };
     window.move = (s) => { let n = currentIdx + s; if(n>=0 && n<bank.length) { currentIdx = n; render(); } };
     window.reveal = () => { revealed[currentIdx] = true; render(); };
-    
-    window.submitExam = (isAuto = false) => {
+    window.submitExam = (auto) => {
         if(submitted) return;
-        if(isAuto || confirm("確定要交卷嗎？系統將根據這 50 題計算分數。")) {
-            submitted = true; 
-            clearInterval(timerInterval);
-            localStorage.setItem(LS_STATE_KEY, JSON.stringify({ answers, currentIdx, submitted }));
-            render();
-            document.getElementById("btnSubmit").disabled = true;
-            document.getElementById("resultBox").style.display="block";
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+        if(auto || confirm("交卷？")) {
+            submitted = true; clearInterval(timerInterval);
+            render(); window.scrollTo(0,0);
         }
     };
-
     init();
 })();
 </script>
