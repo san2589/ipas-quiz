@@ -2,13 +2,13 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="utf-8">
-    <title>iPAS 模擬考系統 - 最終修復版</title>
+    <title>iPAS 模擬考系統 - 最終救援版</title>
     <style>
         :root { --bg:#0f172a; --card:#1e293b; --brand:#2dd4bf; --text:#f1f5f9; }
         body { background:var(--bg); color:var(--text); font-family: sans-serif; margin:0; padding:20px; }
         .wrap { max-width:800px; margin:0 auto; }
         .card { background:var(--card); padding:20px; border-radius:12px; border:1px solid #334155; margin-bottom:15px; }
-        .btn { background:#334155; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold; margin-right:5px; }
+        .btn { background:#334155; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold; margin-right:5px; margin-bottom:5px; }
         .btn-active { background:var(--brand) !important; color:#0f172a !important; }
         .opt { width:100%; text-align:left; padding:15px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:10px; cursor:pointer; }
         .opt.selected { border-color:var(--brand); background:rgba(45,212,191,0.1); }
@@ -50,64 +50,59 @@ let bank = [], current = 0, answers = {}, revealed = {}, isDone = false;
 
 async function fetchData(fileName) {
     const msg = document.getElementById('msg');
-    msg.textContent = "正在載入檔案 " + fileName + "...";
+    msg.textContent = "正在連線到 " + fileName + "...";
     
     document.getElementById('btnAi').classList.toggle('btn-active', fileName.includes('ai'));
     document.getElementById('btnAll').classList.toggle('btn-active', fileName.includes('all'));
 
     try {
         const res = await fetch(fileName + "?v=" + Date.now());
-        if (!res.ok) throw new Error("找不到檔案，請確認 " + fileName + " 位於 index.html 同目錄。");
-        const text = await res.text();
+        if (!res.ok) throw new Error("找不到檔案：" + fileName);
         
-        // 正則抓取大括號內容
+        const text = await res.text();
         const blocks = text.match(/\{[\s\S]*?\}/g);
-        if (!blocks) throw new Error("檔案格式錯誤，找不到題目。");
+        if (!blocks) throw new Error("檔案內容格式不對，找不到任何題項。");
 
         const letterMap = {"A":0, "B":1, "C":2, "D":3};
         let temp = [];
 
         blocks.forEach(b => {
             try {
-                let jsonStr = b.trim().replace(/,$/, "");
-                if(!jsonStr.endsWith("}")) jsonStr += "}";
-                const item = JSON.parse(jsonStr);
-
-                // --- 關鍵修正：增加 item 是否存在的判斷 ---
-                if (!item) return;
+                let s = b.trim().replace(/,$/, "");
+                if(!s.endsWith("}")) s += "}";
+                const item = JSON.parse(s);
 
                 let parsed = { q: "", opts: [], ans: 0, exp: "" };
 
-                // AI 規劃師格式
-                if (item.question !== undefined) { 
-                    parsed.q = item.question;
+                // --- 寬鬆判定邏輯 ---
+                // 1. 抓題目 (question 或 q)
+                parsed.q = item.question || item.q || "";
+                
+                // 2. 抓選項 (options 物件 或 a 陣列)
+                if (item.options && typeof item.options === 'object') {
                     parsed.opts = [item.options.A, item.options.B, item.options.C, item.options.D];
-                    parsed.ans = letterMap[item.answer];
-                    parsed.exp = item.analysis || "";
-                } 
-                // 全部題庫格式
-                else if (item.q !== undefined) { 
-                    parsed.q = item.q;
-                    parsed.opts = item.a || [];
+                    parsed.ans = letterMap[item.answer] !== undefined ? letterMap[item.answer] : 0;
+                } else if (Array.isArray(item.a)) {
+                    parsed.opts = item.a;
                     parsed.ans = (parseInt(item.c) - 1) || 0;
-                    parsed.exp = item.e || "";
                 }
 
-                // 只有成功解析出題目和選項才加入題庫
-                if (parsed.q && parsed.opts && parsed.opts.length > 0) {
+                // 3. 抓解析
+                parsed.exp = item.analysis || item.e || "";
+
+                // 只要有題目跟至少兩個選項就存進去
+                if (parsed.q && parsed.opts && parsed.opts.length >= 2) {
                     temp.push(parsed);
                 }
-            } catch(e) {
-                // 跳過單個解析錯誤的區塊，不中斷整個程式
-            }
+            } catch(e) { }
         });
 
-        if (temp.length === 0) throw new Error("解析失敗：找不到符合格式的題目。");
+        if (temp.length === 0) throw new Error("解析完成，但找不到任何題目。請確認檔案內容格式。");
 
         bank = temp.sort(() => Math.random() - 0.5).slice(0, 50);
         current = 0; answers = {}; revealed = {}; isDone = false;
         document.getElementById('quizBox').style.display = 'block';
-        msg.textContent = "✅ 已成功隨機抽取 50 題";
+        msg.textContent = "✅ 已從 " + temp.length + " 題中隨機抽取 50 題";
         render();
     } catch (e) {
         msg.innerHTML = "<span style='color:#fb7185'>❌ 錯誤: " + e.message + "</span>";
@@ -116,10 +111,10 @@ async function fetchData(fileName) {
 
 function render() {
     const item = bank[current];
-    if (!item) return; // 二次防禦，確保 item 存在
+    if (!item) return;
     
     const show = isDone || revealed[current];
-    let html = `<h3 style="line-height:1.5">${current + 1}. ${item.q}</h3>`;
+    let html = `<h3 style="line-height:1.4;">Q${current + 1}. ${item.q}</h3>`;
     
     item.opts.forEach((opt, i) => {
         let cls = "opt";
@@ -131,7 +126,7 @@ function render() {
         html += `<button class="${cls}" onclick="pick(${i})">${opt}</button>`;
     });
 
-    if (show) html += `<div style="margin-top:15px; padding:15px; background:rgba(45,212,191,0.05); border-left:4px solid var(--brand);"><b>💡 解析：</b><br>${item.exp || "無解析內容"}</div>`;
+    if (show) html += `<div style="margin-top:15px; padding:15px; background:rgba(45,212,191,0.1); border-left:4px solid var(--brand); border-radius:4px;"><b>💡 解析：</b><br>${item.exp || "此題無解析"}</div>`;
     document.getElementById('qArea').innerHTML = html;
 
     document.getElementById('navGrid').innerHTML = bank.map((_, i) => {
@@ -143,7 +138,7 @@ function render() {
 function pick(i) { if(!isDone) { answers[current] = i; render(); } }
 function move(s) { let n = current + s; if(n>=0 && n<bank.length) { current = n; render(); } }
 function showHelp() { revealed[current] = true; render(); }
-function finish() { if(confirm("確定交卷計算分數？")) { isDone = true; render(); } }
+function finish() { if(confirm("確定交卷計算總分？")) { isDone = true; render(); } }
 </script>
 </body>
 </html>
