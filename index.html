@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="utf-8">
-    <title>iPAS 模擬考系統 (修復完成)</title>
+    <title>iPAS 模擬考 - 強韌修復版</title>
     <style>
         :root { --bg:#0f172a; --card:#1e293b; --brand:#2dd4bf; --text:#f1f5f9; }
         body { background:var(--bg); color:var(--text); font-family: sans-serif; margin:0; padding:20px; }
@@ -15,18 +15,19 @@
         .opt.correct { background:rgba(34,197,94,0.2); border-color:#22c55e; }
         .opt.wrong { background:rgba(251,113,133,0.2); border-color:#fb7185; }
         .nav-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(35px, 1fr)); gap:5px; margin-top:10px; }
-        .dot { background:#0f172a; border:1px solid #334155; text-align:center; padding:5px 0; border-radius:5px; cursor:pointer; font-size:12px; }
-        .dot.active { border-color:var(--brand); color:var(--brand); }
-        .dot.done { background:#475569; }
+        .dot { background:#0f172a; border:1px solid #334155; text-align:center; padding:5px 0; border-radius:5px; cursor:pointer; font-size:12px; color:#94a3b8; }
+        .dot.active { border-color:var(--brand); color:var(--brand); font-weight:bold; }
+        .dot.done { background:#334155; color:#fff; }
+        .exp { margin-top:15px; padding:15px; background:rgba(45,212,191,0.05); border-left:4px solid var(--brand); line-height:1.6; }
     </style>
 </head>
 <body>
 <div class="wrap">
     <div class="card">
-        <h2 style="color:var(--brand); margin-top:0;">iPAS 模擬考系統</h2>
-        <button class="btn" id="btnAi" onclick="fetchData('ipas_questions_ai.json')">AI 規劃師 (A/B/C/D 版)</button>
-        <button class="btn" id="btnAll" onclick="fetchData('ipas_questions_all.json')">全部題庫 (1/2/3/4 版)</button>
-        <div id="msg" style="margin-top:10px; font-size:13px; color:#94a3b8;">請確保 JSON 檔案放在 HTML 旁邊</div>
+        <h2 style="color:var(--brand); margin-top:0;">iPAS 模擬考 (自動跳過錯誤版)</h2>
+        <button class="btn" id="btnAi" onclick="fetchData('ipas_questions_ai.json')">AI 規劃師</button>
+        <button class="btn" id="btnAll" onclick="fetchData('ipas_questions_all.json')">全部題庫</button>
+        <div id="msg" style="margin-top:10px; font-size:13px; color:#94a3b8;">如果 JSON 檔案有損壞，系統會自動跳過該題。</div>
     </div>
 
     <div id="quizBox" style="display:none;">
@@ -37,11 +38,9 @@
                 <button class="btn" onclick="showHelp()">看解析</button>
                 <button class="btn" onclick="move(1)">下一題</button>
             </div>
-            <button class="btn" onclick="finish()" style="width:100%; margin-top:10px; background:var(--brand); color:#000;">交卷看分數</button>
+            <button class="btn" onclick="finish()" style="width:100%; margin-top:10px; background:var(--brand); color:#000;">送出交卷</button>
         </div>
-        <div class="card">
-            <div id="navGrid" class="nav-grid"></div>
-        </div>
+        <div class="card"><div id="navGrid" class="nav-grid"></div></div>
     </div>
 </div>
 
@@ -50,44 +49,63 @@ let bank = [], current = 0, answers = {}, revealed = {}, isDone = false;
 
 async function fetchData(fileName) {
     const msg = document.getElementById('msg');
-    msg.textContent = "讀取中：" + fileName;
+    msg.textContent = "正在掃描檔案並修復損壞區塊...";
     
     document.getElementById('btnAi').classList.toggle('btn-active', fileName.includes('ai'));
     document.getElementById('btnAll').classList.toggle('btn-active', fileName.includes('all'));
 
     try {
-        const res = await fetch(fileName + "?v=" + Date.now());
-        if (!res.ok) throw new Error("讀不到檔案 " + fileName);
-        const data = await res.json(); // 這次直接用 JSON 解析
+        const res = await fetch(fileName + "?t=" + Date.now());
+        if (!res.ok) throw new Error("找不到檔案: " + fileName);
         
+        // 【關鍵】不使用 res.json()，改用 text() 以便手動修復
+        const rawText = await res.text();
+        
+        // 使用正則表達式找出所有 { ... } 結構的題目
+        const blocks = rawText.match(/\{[\s\S]*?\}\s*(?=[,\]]|\s*\{|$)/g);
+        if (!blocks) throw new Error("檔案解析失敗，找不到題目內容。");
+
         let temp = [];
         const letterMap = {"A":0, "B":1, "C":2, "D":3};
 
-        data.forEach(item => {
-            let parsed = { q: "", opts: [], ans: 0, exp: "" };
+        blocks.forEach((b, index) => {
+            try {
+                // 清理多餘逗號並嘗試解析單個題目
+                let jsonStr = b.trim();
+                if (jsonStr.endsWith(',')) jsonStr = jsonStr.slice(0, -1);
+                
+                const item = JSON.parse(jsonStr);
+                let parsed = { q: "", opts: [], ans: 0, exp: "" };
 
-            // 針對 ai.json 的格式 (有 question, options, answer)
-            if (item.options) {
-                parsed.q = item.question;
-                parsed.opts = [item.options.A, item.options.B, item.options.C, item.options.D];
-                parsed.ans = letterMap[item.answer];
-                parsed.exp = item.analysis;
-            } 
-            // 針對 all.json 的格式 (有 q, a, c)
-            else if (item.a) {
-                parsed.q = item.q;
-                parsed.opts = item.a;
-                parsed.ans = parseInt(item.c) - 1; // 數字 1-4 轉索引 0-3
-                parsed.exp = item.e;
+                // 辨識 AI 格式
+                if (item.options && item.question) {
+                    parsed.q = item.question;
+                    parsed.opts = [item.options.A, item.options.B, item.options.C, item.options.D];
+                    parsed.ans = letterMap[item.answer] ?? 0;
+                    parsed.exp = item.analysis || "";
+                } 
+                // 辨識 ALL 格式
+                else if (item.a && item.q) {
+                    parsed.q = item.q;
+                    parsed.opts = item.a;
+                    parsed.ans = (parseInt(item.c) - 1) || 0;
+                    parsed.exp = item.e || "";
+                }
+
+                if (parsed.q && parsed.opts.length >= 2) {
+                    temp.push(parsed);
+                }
+            } catch (e) {
+                console.warn("跳過損壞的題目區塊:", index);
             }
-
-            if (parsed.q) temp.push(parsed);
         });
+
+        if (temp.length === 0) throw new Error("沒有成功解析任何題目，請檢查檔案編碼。");
 
         bank = temp.sort(() => Math.random() - 0.5).slice(0, 50);
         current = 0; answers = {}; revealed = {}; isDone = false;
         document.getElementById('quizBox').style.display = 'block';
-        msg.textContent = "✅ 已成功載入 " + bank.length + " 題";
+        msg.textContent = "✅ 已從 " + temp.length + " 題中修復並抽取 50 題。";
         render();
     } catch (e) {
         msg.innerHTML = "<span style='color:#fb7185'>❌ 錯誤: " + e.message + "</span>";
@@ -109,7 +127,7 @@ function render() {
         html += `<button class="${cls}" onclick="pick(${i})">${opt}</button>`;
     });
 
-    if (show) html += `<div style="margin-top:15px; padding:15px; background:rgba(45,212,191,0.05); border-left:4px solid var(--brand);"><b>💡 解析：</b><br>${item.exp || "此題無解析"}</div>`;
+    if (show) html += `<div class="exp"><b>💡 解析：</b><br>${item.exp || "此題無解析"}</div>`;
     document.getElementById('qArea').innerHTML = html;
 
     document.getElementById('navGrid').innerHTML = bank.map((_, i) => {
