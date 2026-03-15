@@ -2,60 +2,78 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="utf-8">
-    <title>iPAS 模擬考系統 - 檢討優化版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>iPAS 模擬考 - 手機優化版</title>
     <style>
         :root { --bg:#0f172a; --card:#1e293b; --brand:#2dd4bf; --text:#f1f5f9; }
-        body { background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, sans-serif; margin:0; padding:20px; line-height:1.6; }
+        body { background:var(--bg); color:var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin:0; padding:15px; line-height:1.5; }
         .wrap { max-width:800px; margin:0 auto; }
-        .card { background:var(--card); padding:24px; border-radius:16px; border:1px solid #334155; margin-bottom:20px; }
-        h2 { color:var(--brand); margin:0 0 15px 0; }
-        .btn { background:#334155; color:white; border:none; padding:10px 18px; border-radius:10px; cursor:pointer; font-weight:bold; margin-right:8px; margin-bottom:8px; }
+        .card { background:var(--card); padding:20px; border-radius:16px; border:1px solid #334155; margin-bottom:15px; }
+        
+        /* 標題與狀態資訊 */
+        h2 { color:var(--brand); margin:0 0 10px 0; font-size: 1.5rem; }
+        .status-msg { font-size: 16px; color: #94a3b8; margin-bottom: 10px; }
+
+        /* 按鈕基本樣式 */
+        .btn { background:#334155; color:white; border:none; padding:12px 15px; border-radius:10px; cursor:pointer; font-weight:bold; font-size: 16px; }
         .btn-active { background:var(--brand) !important; color:#0f172a !important; }
-        .btn-primary { background:var(--brand); color:#0f172a; width: 100%; margin-top: 10px; font-size: 1.1rem; }
-        .opt { width:100%; text-align:left; padding:16px; background:#0f172a; border:2px solid #334155; color:white; border-radius:12px; margin-bottom:12px; cursor:pointer; font-size:16px; display: block; }
+        .btn-primary { background:var(--brand); color:#0f172a; width: 100%; margin-top: 15px; font-size: 20px; padding: 15px; }
+        
+        /* 題目顯示加強 */
+        h3 { font-size: 1.3rem; line-height: 1.4; margin-top: 5px; color: #fff; border-bottom: 1px solid #334155; padding-bottom: 15px; }
+        
+        /* 選項按鈕加強 - 適合大拇指點擊 */
+        .opt { width:100%; text-align:left; padding:18px; background:#0f172a; border:2px solid #334155; color:white; border-radius:12px; margin-bottom:12px; cursor:pointer; font-size: 18px; font-weight: 500; }
         .opt.selected { border-color:var(--brand); background:rgba(45,212,191,0.1); }
         .opt.correct { background:rgba(34,197,94,0.3) !important; border-color:#22c55e !important; color:#4ade80; }
         .opt.wrong { background:rgba(251,113,133,0.3) !important; border-color:#fb7185 !important; color:#fda4af; }
-        .nav-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap:8px; margin-top:15px; }
-        .dot { background:#0f172a; border:1px solid #334155; text-align:center; padding:10px 0; border-radius:8px; cursor:pointer; font-size:12px; }
-        .dot.active { border-color:var(--brand); color:var(--brand); box-shadow: 0 0 8px rgba(45,212,191,0.4); }
-        /* 交卷後的顏色指標 */
+        
+        /* 題號網格優化 - 5欄排列 */
+        .nav-grid { display:grid; grid-template-columns: repeat(5, 1fr); gap:10px; margin-top:10px; }
+        .dot { background:#0f172a; border:1px solid #334155; text-align:center; padding:12px 0; border-radius:8px; cursor:pointer; font-size:16px; font-weight: bold; }
+        .dot.active { border-color:var(--brand); color:var(--brand); border-width: 2px; }
         .dot.score-correct { background:#065f46 !important; border-color:#10b981 !important; color:white; }
         .dot.score-wrong { background:#7f1d1d !important; border-color:#ef4444 !important; color:white; }
         .dot.done { background:#475569; }
-        .exp-box { padding:18px; background:rgba(45,212,191,0.05); border-left:4px solid var(--brand); margin-top:20px; border-radius:8px; }
-        .result-header { text-align: center; padding: 20px; background: rgba(45,212,191,0.1); border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--brand); }
+
+        /* 解析盒 */
+        .exp-box { padding:15px; background:rgba(45,212,191,0.1); border-left:5px solid var(--brand); margin-top:20px; border-radius:8px; font-size: 17px; }
+        
+        /* 分數看板 */
+        .result-header { text-align: center; padding: 25px; background: rgba(45,212,191,0.1); border-radius: 16px; margin-bottom: 15px; border: 2px solid var(--brand); }
     </style>
 </head>
 <body>
 <div class="wrap">
     <div class="card" id="setupBox">
         <h2>iPAS 模擬考系統</h2>
-        <button class="btn" onclick="fetchAndParse('ipas_questions_ai.json')">載入 AI 規劃師</button>
-        <button class="btn" onclick="fetchAndParse('ipas_questions_all.json')">載入全部題庫</button>
-        <div id="status" style="margin-top:10px; font-size:14px; color:#94a3b8;">請選擇題庫開始</div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button class="btn btn-active" onclick="fetchAndParse('ipas_questions_ai.json')">載入 AI 規劃師</button>
+            <button class="btn btn-active" onclick="fetchAndParse('ipas_questions_all.json')">載入全部題庫</button>
+        </div>
+        <div id="status" class="status-msg" style="margin-top:15px;">請選擇題庫載入練習</div>
     </div>
 
     <div id="quizBox" style="display:none;">
         <div id="scoreBoard" class="result-header" style="display:none;">
-            <div style="font-size: 1.2rem;">測驗結束</div>
-            <div style="font-size: 2.5rem; font-weight: bold; color: var(--brand);" id="finalScoreText">0 分</div>
-            <div id="scoreDetailText">答對 0 題 / 答錯 0 題</div>
-            <button class="btn" style="margin-top:10px; background:var(--brand); color:#000;" onclick="location.reload()">重新測驗</button>
+            <div style="font-size: 1.3rem;">測驗結束</div>
+            <div style="font-size: 3rem; font-weight: bold; color: var(--brand);" id="finalScoreText">0</div>
+            <div id="scoreDetailText" style="font-size: 18px;">正確 0 | 錯誤 0</div>
+            <button class="btn" style="margin-top:15px; background:var(--brand); color:#000; width:80%;" onclick="location.reload()">重新測驗</button>
         </div>
 
         <div class="card">
             <div id="qArea"></div>
-            <div style="display:flex; justify-content:space-between; margin-top:25px; gap:10px;">
-                <button class="btn" style="flex:1" onclick="move(-1)">上一題</button>
+            <div style="display:flex; justify-content:space-between; margin-top:20px; gap:10px;">
+                <button class="btn" style="flex:1" onclick="move(-1)">← 上一題</button>
                 <button class="btn" style="flex:1" onclick="revealed[current]=true;render()">看解析</button>
-                <button class="btn" style="flex:1" onclick="move(1)">下一題</button>
+                <button class="btn" style="flex:1" onclick="move(1)">下一題 →</button>
             </div>
             <button class="btn btn-primary" id="finishBtn" onclick="submitExam()">送出交卷</button>
         </div>
 
         <div class="card">
-            <div style="margin-bottom:10px; font-weight:bold;">題目清單 (點擊可跳題檢討)</div>
+            <div style="margin-bottom:12px; font-weight:bold; font-size: 18px;">題目導覽 (紅綠燈檢討)</div>
             <div id="navGrid" class="nav-grid"></div>
         </div>
     </div>
@@ -65,7 +83,7 @@
 let bank = [], current = 0, answers = {}, revealed = {}, isFinished = false;
 
 async function fetchAndParse(name) {
-    document.getElementById('status').textContent = "讀取中...";
+    document.getElementById('status').textContent = "讀取中，請稍候...";
     try {
         const res = await fetch(name + "?v=" + Date.now());
         const text = await res.text();
@@ -119,7 +137,6 @@ function render() {
     if (showResult) html += `<div class="exp-box"><b>💡 解析：</b><br>${item.exp}</div>`;
     document.getElementById('qArea').innerHTML = html;
     
-    // 更新網格
     document.getElementById('navGrid').innerHTML = bank.map((it, i) => {
         let cls = "dot";
         if (i === current) cls += " active";
@@ -130,10 +147,11 @@ function render() {
         }
         return `<div class="${cls}" onclick="current=${i};render()">${i+1}</div>`;
     }).join('');
+    window.scrollTo(0, 0); // 換題時自動捲回頂部
 }
 
 function selectOpt(i) {
-    if (isFinished) return; // 交卷後不能改答案，但可以點擊看題目
+    if (isFinished) return;
     answers[current] = i;
     render();
 }
@@ -144,21 +162,16 @@ function move(step) {
 }
 
 function submitExam() {
-    if (!confirm("確定要交卷嗎？送出後可點擊下方題號查看每一題的對錯。")) return;
-    
+    if (!confirm("確定交卷嗎？")) return;
     isFinished = true;
     let correct = 0;
     bank.forEach((it, i) => { if (answers[i] === it.ans) correct++; });
-
     const score = Math.round((correct / bank.length) * 100);
-    
-    // 顯示分數看板
     document.getElementById('scoreBoard').style.display = "block";
     document.getElementById('finalScoreText').textContent = score + " 分";
     document.getElementById('scoreDetailText').textContent = `答對：${correct} 題 | 答錯：${bank.length - correct} 題`;
-    document.getElementById('finishBtn').style.display = "none"; // 隱藏交卷按鈕
-    
-    current = 0; // 回到第一題讓使用者開始檢討
+    document.getElementById('finishBtn').style.display = "none";
+    current = 0;
     render();
 }
 </script>
