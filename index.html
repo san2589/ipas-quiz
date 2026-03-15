@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="utf-8">
-    <title>iPAS 模擬考系統</title>
+    <title>iPAS 模擬考系統 - 最終修復版</title>
     <style>
         :root { --bg:#0f172a; --card:#1e293b; --brand:#2dd4bf; --text:#f1f5f9; }
         body { background:var(--bg); color:var(--text); font-family: sans-serif; margin:0; padding:20px; }
@@ -18,7 +18,6 @@
         .dot { background:#0f172a; border:1px solid #334155; text-align:center; padding:5px 0; border-radius:5px; cursor:pointer; font-size:12px; }
         .dot.active { border-color:var(--brand); color:var(--brand); }
         .dot.done { background:#475569; }
-        .exp { margin-top:15px; padding:15px; background:rgba(45,212,191,0.05); border-left:4px solid var(--brand); }
     </style>
 </head>
 <body>
@@ -51,68 +50,76 @@ let bank = [], current = 0, answers = {}, revealed = {}, isDone = false;
 
 async function fetchData(fileName) {
     const msg = document.getElementById('msg');
-    msg.textContent = "載入中...";
+    msg.textContent = "正在載入檔案 " + fileName + "...";
     
-    // UI 切換
     document.getElementById('btnAi').classList.toggle('btn-active', fileName.includes('ai'));
     document.getElementById('btnAll').classList.toggle('btn-active', fileName.includes('all'));
 
     try {
-        // 直接讀取 .json 檔案
         const res = await fetch(fileName + "?v=" + Date.now());
-        if (!res.ok) throw new Error("找不到檔案: " + fileName);
+        if (!res.ok) throw new Error("找不到檔案，請確認 " + fileName + " 位於 index.html 同目錄。");
         const text = await res.text();
         
-        // 使用正則表達式分離出每一題的物件
+        // 正則抓取大括號內容
         const blocks = text.match(/\{[\s\S]*?\}/g);
-        if (!blocks) throw new Error("解析失敗");
+        if (!blocks) throw new Error("檔案格式錯誤，找不到題目。");
 
         const letterMap = {"A":0, "B":1, "C":2, "D":3};
         let temp = [];
 
         blocks.forEach(b => {
             try {
-                // 清理 JSON 格式
                 let jsonStr = b.trim().replace(/,$/, "");
                 if(!jsonStr.endsWith("}")) jsonStr += "}";
                 const item = JSON.parse(jsonStr);
 
-                // 核心修復：精準辨識兩種不同結構
+                // --- 關鍵修正：增加 item 是否存在的判斷 ---
+                if (!item) return;
+
                 let parsed = { q: "", opts: [], ans: 0, exp: "" };
 
-                if (item.options) { 
-                    // 結構 A: ai.json (question, options, answer)
+                // AI 規劃師格式
+                if (item.question !== undefined) { 
                     parsed.q = item.question;
                     parsed.opts = [item.options.A, item.options.B, item.options.C, item.options.D];
                     parsed.ans = letterMap[item.answer];
-                    parsed.exp = item.analysis;
-                } else if (item.a) { 
-                    // 結構 B: all.json (q, a, c)
+                    parsed.exp = item.analysis || "";
+                } 
+                // 全部題庫格式
+                else if (item.q !== undefined) { 
                     parsed.q = item.q;
-                    parsed.opts = item.a;
-                    parsed.ans = parseInt(item.c) - 1; // 數字 1-4 轉 0-3
-                    parsed.exp = item.e;
+                    parsed.opts = item.a || [];
+                    parsed.ans = (parseInt(item.c) - 1) || 0;
+                    parsed.exp = item.e || "";
                 }
 
-                if (parsed.q && parsed.opts.length > 0) temp.push(parsed);
-            } catch(e) {}
+                // 只有成功解析出題目和選項才加入題庫
+                if (parsed.q && parsed.opts && parsed.opts.length > 0) {
+                    temp.push(parsed);
+                }
+            } catch(e) {
+                // 跳過單個解析錯誤的區塊，不中斷整個程式
+            }
         });
 
-        // 隨機抽 50 題
+        if (temp.length === 0) throw new Error("解析失敗：找不到符合格式的題目。");
+
         bank = temp.sort(() => Math.random() - 0.5).slice(0, 50);
         current = 0; answers = {}; revealed = {}; isDone = false;
         document.getElementById('quizBox').style.display = 'block';
-        msg.textContent = "✅ 成功載入 " + bank.length + " 題";
+        msg.textContent = "✅ 已成功隨機抽取 50 題";
         render();
     } catch (e) {
-        msg.innerHTML = "<span style='color:#fb7185'>" + e.message + "</span>";
+        msg.innerHTML = "<span style='color:#fb7185'>❌ 錯誤: " + e.message + "</span>";
     }
 }
 
 function render() {
     const item = bank[current];
+    if (!item) return; // 二次防禦，確保 item 存在
+    
     const show = isDone || revealed[current];
-    let html = `<h3>${current + 1}. ${item.q}</h3>`;
+    let html = `<h3 style="line-height:1.5">${current + 1}. ${item.q}</h3>`;
     
     item.opts.forEach((opt, i) => {
         let cls = "opt";
@@ -124,7 +131,7 @@ function render() {
         html += `<button class="${cls}" onclick="pick(${i})">${opt}</button>`;
     });
 
-    if (show) html += `<div class="exp"><b>💡 解析：</b><br>${item.exp || "無解析內容"}</div>`;
+    if (show) html += `<div style="margin-top:15px; padding:15px; background:rgba(45,212,191,0.05); border-left:4px solid var(--brand);"><b>💡 解析：</b><br>${item.exp || "無解析內容"}</div>`;
     document.getElementById('qArea').innerHTML = html;
 
     document.getElementById('navGrid').innerHTML = bank.map((_, i) => {
@@ -136,7 +143,7 @@ function render() {
 function pick(i) { if(!isDone) { answers[current] = i; render(); } }
 function move(s) { let n = current + s; if(n>=0 && n<bank.length) { current = n; render(); } }
 function showHelp() { revealed[current] = true; render(); }
-function finish() { if(confirm("確定交卷？")) { isDone = true; render(); } }
+function finish() { if(confirm("確定交卷計算分數？")) { isDone = true; render(); } }
 </script>
 </body>
 </html>
