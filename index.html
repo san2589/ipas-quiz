@@ -2,61 +2,92 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="utf-8">
-    <title>iPAS 模擬考 - 功能修復版</title>
+    <title>iPAS 模擬考系統 - 完整功能版</title>
     <style>
         :root { --bg:#0f172a; --card:#1e293b; --brand:#2dd4bf; --text:#f1f5f9; }
-        body { background:var(--bg); color:var(--text); font-family: sans-serif; margin:0; padding:20px; line-height:1.6; }
+        body { background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, sans-serif; margin:0; padding:20px; line-height:1.6; }
         .wrap { max-width:800px; margin:0 auto; }
-        .card { background:var(--card); padding:20px; border-radius:12px; border:1px solid #334155; margin-bottom:15px; }
-        .btn { background:#334155; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold; margin-right:8px; }
+        .card { background:var(--card); padding:24px; border-radius:16px; border:1px solid #334155; margin-bottom:20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        h2 { color:var(--brand); margin:0 0 15px 0; }
+        .btn { background:#334155; color:white; border:none; padding:10px 18px; border-radius:10px; cursor:pointer; font-weight:bold; transition:all 0.2s; margin-right:8px; margin-bottom:8px; border:1px solid transparent; }
+        .btn:hover { background: #475569; transform: translateY(-1px); }
         .btn-active { background:var(--brand) !important; color:#0f172a !important; }
-        .opt { width:100%; text-align:left; padding:15px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:10px; cursor:pointer; font-size:16px; display: block; }
+        .btn-primary { background:var(--brand); color:#0f172a; width: 100%; margin-top: 10px; font-size: 1.1rem; }
+        
+        .opt { width:100%; text-align:left; padding:16px; background:#0f172a; border:2px solid #334155; color:white; border-radius:12px; margin-bottom:12px; cursor:pointer; font-size:16px; transition: 0.2s; }
+        .opt:hover:not(:disabled) { border-color: #475569; background: #162035; }
         .opt.selected { border-color:var(--brand); background:rgba(45,212,191,0.1); }
-        .opt.correct { background:rgba(34,197,94,0.3) !important; border-color:#22c55e !important; }
-        .opt.wrong { background:rgba(251,113,133,0.3) !important; border-color:#fb7185 !important; }
-        .nav-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap:8px; margin-top:10px; }
-        .dot { background:#0f172a; border:1px solid #334155; text-align:center; padding:8px 0; border-radius:5px; cursor:pointer; font-size:12px; }
-        .dot.active { border-color:var(--brand); color:var(--brand); font-weight:bold; }
-        .dot.done { background:#475569; color:#fff; }
-        .exp-box { padding:15px; background:rgba(45,212,191,0.1); border-left:4px solid var(--brand); margin-top:15px; border-radius:4px; }
+        .opt.correct { background:rgba(34,197,94,0.2) !important; border-color:#22c55e !important; color: #4ade80; }
+        .opt.wrong { background:rgba(251,113,133,0.2) !important; border-color:#fb7185 !important; color: #fda4af; }
+        
+        .nav-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap:8px; margin-top:15px; }
+        .dot { background:#0f172a; border:1px solid #334155; text-align:center; padding:10px 0; border-radius:8px; cursor:pointer; font-size:12px; transition: 0.2s; }
+        .dot.active { border-color:var(--brand); color:var(--brand); box-shadow: 0 0 10px rgba(45,212,191,0.3); }
+        .dot.done { background:#475569; border-color: #64748b; }
+        .dot.score-correct { background:#065f46; border-color:#059669; }
+        .dot.score-wrong { background:#7f1d1d; border-color:#dc2626; }
+        
+        .exp-box { padding:18px; background:rgba(45,212,191,0.05); border-left:4px solid var(--brand); margin-top:20px; border-radius:8px; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .score-display { text-align: center; font-size: 2rem; font-weight: bold; color: var(--brand); margin: 10px 0; }
+        .status-bar { font-size: 14px; color: #94a3b8; display: flex; justify-content: space-between; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 <div class="wrap">
     <div class="card">
-        <h2 style="color:var(--brand); margin-top:0;">iPAS 模擬考系統</h2>
-        <button class="btn" id="btnAi" onclick="fetchAndParse('ipas_questions_ai.json')">載入 AI 規劃師</button>
-        <button class="btn" id="btnAll" onclick="fetchAndParse('ipas_questions_all.json')">載入全部題庫</button>
-        <div id="status" style="margin-top:10px; font-size:14px; color:#94a3b8;">狀態：待命</div>
+        <h2>iPAS 模擬考系統</h2>
+        <div id="btnGroup">
+            <button class="btn" id="btnAi" onclick="fetchAndParse('ipas_questions_ai.json')">AI 規劃師</button>
+            <button class="btn" id="btnAll" onclick="fetchAndParse('ipas_questions_all.json')">全部題庫</button>
+            <button class="btn" onclick="location.reload()" style="float:right; background:#475569;">重整頁面</button>
+        </div>
+        <div id="status" style="margin-top:12px; font-size:14px; color:#94a3b8;">請選擇上方題庫載入練習。</div>
     </div>
+
     <div id="quizBox" style="display:none;">
         <div class="card">
-            <div id="qArea"></div>
-            <div style="display:flex; justify-content:space-between; margin-top:20px;">
-                <button class="btn" onclick="move(-1)">上一題</button>
-                <button class="btn" onclick="revealExp()">看解析</button>
-                <button class="btn" onclick="move(1)">下一題</button>
+            <div class="status-bar">
+                <span id="currentMode">練習模式</span>
+                <span id="progressText">0 / 50</span>
             </div>
+            <div id="qArea"></div>
+            
+            <div style="display:flex; justify-content:space-between; margin-top:25px; gap: 10px;">
+                <button class="btn" style="flex:1" onclick="move(-1)">上一題</button>
+                <button class="btn" style="flex:1" id="btnHelp" onclick="revealCurrent()">看解析</button>
+                <button class="btn" style="flex:1" onclick="move(1)">下一題</button>
+            </div>
+            <button class="btn btn-primary" id="btnFinish" onclick="submitExam()">交卷計算分數</button>
         </div>
-        <div class="card"><div id="navGrid" class="nav-grid"></div></div>
+
+        <div class="card">
+            <div style="font-weight:bold; margin-bottom:10px;">題目導覽</div>
+            <div id="navGrid" class="nav-grid"></div>
+        </div>
+    </div>
+
+    <div id="resultBox" class="card" style="display:none; text-align: center;">
+        <h2>測驗結束</h2>
+        <div class="score-display" id="finalScore">0</div>
+        <p id="scoreDetail">正確：0 題 | 錯誤：0 題</p>
+        <button class="btn btn-primary" onclick="location.reload()">重新挑戰</button>
     </div>
 </div>
 
 <script>
-let bank = [], current = 0, answers = {}, revealed = {};
+let bank = [], current = 0, answers = {}, revealed = {}, isFinished = false;
 
 async function fetchAndParse(name) {
-    document.getElementById('status').textContent = "讀取並解析中...";
+    document.getElementById('status').textContent = "正在解析檔案並生成考卷...";
     try {
         const res = await fetch(name + "?v=" + Date.now());
         const text = await res.text();
-        
-        // 1. 先用大括號把題目切開
         const blocks = text.split(/\{(?=\s*"(?:id|q|question)")/);
         let temp = [];
 
         blocks.forEach(block => {
-            // 抓取引號內的文字 (處理轉義引號 \")
             const find = (key) => {
                 const r = new RegExp(`"${key}"\\s*:\\s*"([\\s\\S]*?)"(?=[\\s\\n]*,|[\\s\\n]*\\})`);
                 const m = block.match(r);
@@ -66,21 +97,16 @@ async function fetchAndParse(name) {
             let q = find("question") || find("q");
             if (!q) return;
 
-            let item = { q: q, opts: [], ans: -1, exp: find("analysis") || find("e") || "無解析" };
+            let item = { q: q, opts: [], ans: -1, exp: find("analysis") || find("e") || "本題無提供詳細解析。" };
 
-            // 處理 AI 版選項
             if (block.includes('"options"')) {
-                const optA = find("A");
-                const optB = find("B");
-                const optC = find("C");
-                const optD = find("D");
-                if (optA) item.opts = [optA, optB, optC, optD];
-                const letterMap = {"A":0, "B":1, "C":2, "D":3};
-                const rawAns = find("answer");
-                item.ans = letterMap[rawAns];
-            } 
-            // 處理 ALL 版選項
-            else {
+                const opts = [find("A"), find("B"), find("C"), find("D")].filter(o => o !== null);
+                if (opts.length >= 2) {
+                    item.opts = opts;
+                    const lMap = {"A":0, "B":1, "C":2, "D":3};
+                    item.ans = lMap[find("answer")];
+                }
+            } else {
                 const aMatch = block.match(/"a"\s*:\s*\[([\s\S]*?)\]/);
                 if (aMatch) {
                     item.opts = aMatch[1].split(/",|"/).map(s => s.trim().replace(/[\[\]"]/g, '')).filter(s => s.length > 0);
@@ -89,23 +115,30 @@ async function fetchAndParse(name) {
                 if (cMatch) item.ans = parseInt(cMatch[1]) - 1;
             }
 
-            if (item.q && item.opts.length >= 2) temp.push(item);
+            if (item.q && item.opts.length >= 2 && item.ans !== -1) temp.push(item);
         });
 
+        // 隨機抽 50 題
         bank = temp.sort(() => Math.random() - 0.5).slice(0, 50);
-        current = 0; answers = {}; revealed = {};
+        current = 0; answers = {}; revealed = {}; isFinished = false;
+        
         document.getElementById('quizBox').style.display = "block";
-        document.getElementById('status').textContent = "✅ 成功載入 " + temp.length + " 題，已隨機抽取 50 題。";
+        document.getElementById('resultBox').style.display = "none";
+        document.getElementById('btnGroup').style.display = "none"; // 進入考試後隱藏切換按鈕
+        document.getElementById('status').textContent = "✅ 已成功載入 " + temp.length + " 題，試卷生成完成！";
         render();
     } catch (e) {
-        document.getElementById('status').textContent = "❌ 讀取失敗: " + e.message;
+        document.getElementById('status').textContent = "❌ 載入失敗: " + e.message;
     }
 }
 
 function render() {
     const item = bank[current];
-    const isRevealed = revealed[current];
-    let html = `<h3>Q${current + 1}. ${item.q}</h3>`;
+    const isRevealed = revealed[current] || isFinished;
+    
+    document.getElementById('progressText').textContent = `${current + 1} / ${bank.length}`;
+    
+    let html = `<h3 style="margin-bottom:24px;">${current + 1}. ${item.q}</h3>`;
 
     item.opts.forEach((opt, i) => {
         let cls = "opt";
@@ -114,44 +147,66 @@ function render() {
             if (i === item.ans) cls += " correct";
             else if (answers[current] === i) cls += " wrong";
         }
-        html += `<button class="${cls}" onclick="selectOpt(${i})">${opt}</button>`;
+        html += `<button class="${cls}" onclick="handleSelect(${i})" ${isRevealed && !isFinished ? 'disabled' : ''}>${opt}</button>`;
     });
 
     if (isRevealed) {
-        html += `<div class="exp-box"><b>💡 解析：</b><br>${item.exp}</div>`;
+        html += `<div class="exp-box"><b>💡 題目解析：</b><br>${item.exp}</div>`;
     }
 
     document.getElementById('qArea').innerHTML = html;
-    
-    // 更新題號網格
-    document.getElementById('navGrid').innerHTML = bank.map((_, i) => {
-        let cls = "dot" + (i === current ? " active" : (answers[i] !== undefined ? " done" : ""));
-        return `<div class="${cls}" onclick="gotoQ(${i})">${i + 1}</div>`;
-    }).join('');
+    updateNav();
 }
 
-function selectOpt(index) {
-    if (revealed[current]) return; // 已看解析就不准再選
-    answers[current] = index;
+function handleSelect(i) {
+    if (isFinished) return;
+    answers[current] = i;
     render();
 }
 
-function revealExp() {
+function updateNav() {
+    document.getElementById('navGrid').innerHTML = bank.map((item, i) => {
+        let cls = "dot";
+        if (i === current) cls += " active";
+        if (isFinished) {
+            cls += (answers[i] === item.ans) ? " score-correct" : " score-wrong";
+        } else {
+            if (answers[i] !== undefined) cls += " done";
+        }
+        return `<div class="${cls}" onclick="jumpTo(${i})">${i + 1}</div>`;
+    }).join('');
+}
+
+function jumpTo(i) { current = i; render(); }
+function move(step) {
+    let n = current + step;
+    if (n >= 0 && n < bank.length) { current = n; render(); }
+}
+
+function revealCurrent() {
     revealed[current] = true;
     render();
 }
 
-function gotoQ(index) {
-    current = index;
-    render();
-}
-
-function move(step) {
-    let next = current + step;
-    if (next >= 0 && next < bank.length) {
-        current = next;
-        render();
+function submitExam() {
+    const doneCount = Object.keys(answers).length;
+    if (doneCount < bank.length) {
+        if (!confirm(`您還有 ${bank.length - doneCount} 題未完成，確定要交卷嗎？`)) return;
+    } else {
+        if (!confirm("確定要交卷嗎？")) return;
     }
+
+    isFinished = true;
+    let correct = 0;
+    bank.forEach((item, i) => {
+        if (answers[i] === item.ans) correct++;
+    });
+
+    const score = Math.round((correct / bank.length) * 100);
+    document.getElementById('quizBox').style.display = "none";
+    document.getElementById('resultBox').style.display = "block";
+    document.getElementById('finalScore').textContent = score + " 分";
+    document.getElementById('scoreDetail').textContent = `答對：${correct} 題 | 答錯：${bank.length - correct} 題`;
 }
 </script>
 </body>
