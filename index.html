@@ -2,135 +2,141 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>iPAS 模擬考系統 - 穩定修復版</title>
+    <title>iPAS 模擬考系統</title>
     <style>
-        :root { --bg:#0f172a; --card:#1e293b; --brand:#2dd4bf; --text:#f1f5f9; --danger:#fb7185; }
-        body { background:var(--bg); color:var(--text); font-family: sans-serif; margin:0; padding:15px; }
+        :root { --bg:#0f172a; --card:#1e293b; --brand:#2dd4bf; --text:#f1f5f9; }
+        body { background:var(--bg); color:var(--text); font-family: sans-serif; margin:0; padding:20px; }
         .wrap { max-width:800px; margin:0 auto; }
-        .card { background:var(--card); padding:20px; border-radius:12px; margin-bottom:15px; border:1px solid #334155; }
-        .btn { background:#334155; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold; }
-        .btn:hover { background: #475569; }
+        .card { background:var(--card); padding:20px; border-radius:12px; border:1px solid #334155; margin-bottom:15px; }
+        .btn { background:#334155; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold; margin-right:5px; }
         .btn-active { background:var(--brand) !important; color:#0f172a !important; }
-        .opt { width:100%; text-align:left; padding:15px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:10px; cursor:pointer; font-size:16px; }
+        .opt { width:100%; text-align:left; padding:15px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:10px; cursor:pointer; }
         .opt.selected { border-color:var(--brand); background:rgba(45,212,191,0.1); }
         .opt.correct { background:rgba(34,197,94,0.2); border-color:#22c55e; }
-        .opt.wrong { background:rgba(251,113,133,0.2); border-color:var(--danger); }
+        .opt.wrong { background:rgba(251,113,133,0.2); border-color:#fb7185; }
         .nav-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(35px, 1fr)); gap:5px; margin-top:10px; }
         .dot { background:#0f172a; border:1px solid #334155; text-align:center; padding:5px 0; border-radius:5px; cursor:pointer; font-size:12px; }
         .dot.active { border-color:var(--brand); color:var(--brand); }
-        .dot.done { background:#334155; }
-        .exp { margin-top:15px; padding:15px; background:rgba(255,255,255,0.05); border-left:4px solid var(--brand); font-size:0.95rem; }
+        .dot.done { background:#475569; }
+        .exp { margin-top:15px; padding:15px; background:rgba(45,212,191,0.05); border-left:4px solid var(--brand); }
     </style>
 </head>
 <body>
 <div class="wrap">
     <div class="card">
-        <h2 style="margin:0 0 15px 0; color:var(--brand);">iPAS 題庫練習</h2>
-        <div style="display:flex; gap:10px;">
-            <button class="btn" id="btnAi" onclick="loadLib('./ipas_questions_ai.json')">AI 規劃師</button>
-            <button class="btn" id="btnAll" onclick="loadLib('./ipas_questions_all.json')">全部題庫</button>
-        </div>
+        <h2 style="color:var(--brand); margin-top:0;">iPAS 模擬考系統</h2>
+        <button class="btn" id="btnAi" onclick="fetchData('ipas_questions_ai.json')">AI 規劃師</button>
+        <button class="btn" id="btnAll" onclick="fetchData('ipas_questions_all.json')">全部題庫</button>
+        <div id="msg" style="margin-top:10px; font-size:13px; color:#94a3b8;">請點擊按鈕載入題庫</div>
     </div>
 
     <div id="quizBox" style="display:none;">
         <div class="card">
-            <div id="questionArea"></div>
+            <div id="qArea"></div>
             <div style="display:flex; justify-content:space-between; margin-top:20px;">
-                <button class="btn" onclick="go(-1)">上一題</button>
-                <button class="btn" id="btnReveal" onclick="showAns()">看解析</button>
-                <button class="btn" onclick="go(1)">下一題</button>
+                <button class="btn" onclick="move(-1)">上一題</button>
+                <button class="btn" onclick="showHelp()">看解析</button>
+                <button class="btn" onclick="move(1)">下一題</button>
             </div>
-            <button class="btn" onclick="submit()" style="width:100%; margin-top:10px; background:var(--brand); color:#000;">交卷看分數</button>
+            <button class="btn" onclick="finish()" style="width:100%; margin-top:10px; background:var(--brand); color:#000;">交卷</button>
         </div>
         <div class="card">
-            <div style="font-weight:bold; margin-bottom:10px;">題目導航</div>
             <div id="navGrid" class="nav-grid"></div>
         </div>
     </div>
 </div>
 
 <script>
-let bank = [], current = 0, userAns = {}, isSubmitted = false, isRevealed = {};
+let bank = [], current = 0, answers = {}, revealed = {}, isDone = false;
 
-async function loadLib(url) {
-    // 介面更新
-    document.getElementById('btnAi').classList.toggle('btn-active', url.includes('ai'));
-    document.getElementById('btnAll').classList.toggle('btn-active', url.includes('all'));
+async function fetchData(fileName) {
+    const msg = document.getElementById('msg');
+    msg.textContent = "載入中...";
     
+    // UI 切換
+    document.getElementById('btnAi').classList.toggle('btn-active', fileName.includes('ai'));
+    document.getElementById('btnAll').classList.toggle('btn-active', fileName.includes('all'));
+
     try {
-        const res = await fetch(url + '?v=' + Date.now());
-        if (!res.ok) throw new Error("找不到檔案，請確認檔案放在 index.html 旁邊");
+        // 直接讀取 .json 檔案
+        const res = await fetch(fileName + "?v=" + Date.now());
+        if (!res.ok) throw new Error("找不到檔案: " + fileName);
+        const text = await res.text();
         
-        const raw = await res.text();
-        const matches = raw.match(/\{[\s\S]*?\}/g); // 寬鬆抓取大括號物件
-        
-        let temp = [];
+        // 使用正則表達式分離出每一題的物件
+        const blocks = text.match(/\{[\s\S]*?\}/g);
+        if (!blocks) throw new Error("解析失敗");
+
         const letterMap = {"A":0, "B":1, "C":2, "D":3};
+        let temp = [];
 
-        matches.forEach(m => {
+        blocks.forEach(b => {
             try {
-                let clean = m.trim().replace(/,$/, "");
-                if(!clean.endsWith("}")) clean += "}";
-                const q = JSON.parse(clean);
-                
-                let title = q.question || q.q;
-                let opts = [];
-                let ans = 0;
-                let exp = q.analysis || q.e || "";
+                // 清理 JSON 格式
+                let jsonStr = b.trim().replace(/,$/, "");
+                if(!jsonStr.endsWith("}")) jsonStr += "}";
+                const item = JSON.parse(jsonStr);
 
-                // 判斷是哪種格式
-                if (q.options) { // AI 格式
-                    opts = [q.options.A, q.options.B, q.options.C, q.options.D];
-                    ans = letterMap[q.answer];
-                } else if (q.a) { // ALL 格式
-                    opts = q.a;
-                    ans = parseInt(q.c) - 1;
+                // 核心修復：精準辨識兩種不同結構
+                let parsed = { q: "", opts: [], ans: 0, exp: "" };
+
+                if (item.options) { 
+                    // 結構 A: ai.json (question, options, answer)
+                    parsed.q = item.question;
+                    parsed.opts = [item.options.A, item.options.B, item.options.C, item.options.D];
+                    parsed.ans = letterMap[item.answer];
+                    parsed.exp = item.analysis;
+                } else if (item.a) { 
+                    // 結構 B: all.json (q, a, c)
+                    parsed.q = item.q;
+                    parsed.opts = item.a;
+                    parsed.ans = parseInt(item.c) - 1; // 數字 1-4 轉 0-3
+                    parsed.exp = item.e;
                 }
 
-                if (title && opts.length > 0) temp.push({ title, opts, ans, exp });
+                if (parsed.q && parsed.opts.length > 0) temp.push(parsed);
             } catch(e) {}
         });
 
+        // 隨機抽 50 題
         bank = temp.sort(() => Math.random() - 0.5).slice(0, 50);
-        current = 0; userAns = {}; isSubmitted = false; isRevealed = {};
+        current = 0; answers = {}; revealed = {}; isDone = false;
         document.getElementById('quizBox').style.display = 'block';
+        msg.textContent = "✅ 成功載入 " + bank.length + " 題";
         render();
     } catch (e) {
-        alert(e.message);
+        msg.innerHTML = "<span style='color:#fb7185'>" + e.message + "</span>";
     }
 }
 
 function render() {
-    const q = bank[current];
-    const show = isSubmitted || isRevealed[current];
-    let html = `<h3>${current + 1}. ${q.title}</h3>`;
-    q.opts.forEach((opt, i) => {
+    const item = bank[current];
+    const show = isDone || revealed[current];
+    let html = `<h3>${current + 1}. ${item.q}</h3>`;
+    
+    item.opts.forEach((opt, i) => {
         let cls = "opt";
-        if (userAns[current] === i) cls += " selected";
+        if (answers[current] === i) cls += " selected";
         if (show) {
-            if (i === q.ans) cls += " correct";
-            else if (userAns[current] === i) cls += " wrong";
+            if (i === item.ans) cls += " correct";
+            else if (answers[current] === i) cls += " wrong";
         }
         html += `<button class="${cls}" onclick="pick(${i})">${opt}</button>`;
     });
-    if (show) html += `<div class="exp"><b>💡 解析：</b><br>${q.exp || "此題無解析"}</div>`;
-    document.getElementById('questionArea').innerHTML = html;
-    
-    // 更新導航
+
+    if (show) html += `<div class="exp"><b>💡 解析：</b><br>${item.exp || "無解析內容"}</div>`;
+    document.getElementById('qArea').innerHTML = html;
+
     document.getElementById('navGrid').innerHTML = bank.map((_, i) => {
-        let cls = "dot" + (i === current ? " active" : (userAns[i] !== undefined ? " done" : ""));
+        let cls = "dot" + (i === current ? " active" : (answers[i] !== undefined ? " done" : ""));
         return `<div class="${cls}" onclick="current=${i};render()">${i+1}</div>`;
     }).join('');
 }
 
-function pick(i) { if(!isSubmitted) { userAns[current] = i; render(); } }
-function go(s) { let n = current + s; if(n>=0 && n<bank.length) { current = n; render(); } }
-function showAns() { isRevealed[current] = true; render(); }
-function submit() { if(confirm("確定交卷？")) { isSubmitted = true; render(); } }
-
-// 預設載入 AI 題庫
-loadLib('./ipas_questions_ai.json');
+function pick(i) { if(!isDone) { answers[current] = i; render(); } }
+function move(s) { let n = current + s; if(n>=0 && n<bank.length) { current = n; render(); } }
+function showHelp() { revealed[current] = true; render(); }
+function finish() { if(confirm("確定交卷？")) { isDone = true; render(); } }
 </script>
 </body>
 </html>
